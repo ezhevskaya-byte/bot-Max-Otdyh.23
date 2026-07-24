@@ -1,0 +1,29 @@
+{
+  "name": "otdyh23-max-bot",
+  "version": "0.1.0",
+  "description": "AI-бот гостевого дома «Отдых23» для мессенджера MAX",
+  "type": "module",
+  "main": "backend/src/index.js",
+  "scripts": {
+    "start": "node --env-file=.env backend/src/index.js",
+    "dev": "node --env-file=.env --watch backend/src/index.js",
+    "lint": "eslint backend/src integrations",
+    "test": "node --test backend/tests/**/*.test.js",
+    "test:webhook": "node scripts/test-max-webhook.mjs",
+    "check:max-bot": "node --env-file=.env scripts/check-max-bot.mjs",
+    "register:max-webhook": "node --env-file=.env scripts/register-max-webhook.mjs",
+    "audit:max": "node --env-file=.env scripts/audit-and-setup-max.mjs",
+    "kill:3000": "powershell -ExecutionPolicy Bypass -File scripts/kill-port-3000.ps1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "max",
+    "booking",
+    "guest-house",
+    "otdyh23"
+  ],
+  "license": "UNLICENSED",
+  "private": true
+}
