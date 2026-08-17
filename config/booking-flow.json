@@ -1,0 +1,27 @@
+{
+  "states": [
+    "idle",
+    "collecting_dates",
+    "collecting_guests",
+    "collecting_children",
+    "collecting_bed_preferences",
+    "suggesting_rooms",
+    "reviewing_application",
+    "confirmed"
+  ],
+  "requiredFields": [
+    "checkIn",
+    "checkOut",
+    "adults",
+    "children",
+    "childrenAges",
+    "bedPreferences",
+    "selectedRoom"
+  ],
+  "buttons": {
+    "contactAdmin": "Связаться с администратором",
+    "confirmApplication": "Подтвердить заявку",
+    "editApplication": "Изменить данные",
+    "startBooking": "Забронировать номер"
+  }
+}

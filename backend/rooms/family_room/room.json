@@ -1,0 +1,93 @@
+{
+    "id": "family_room",
+    "name": "Семейная комната",
+    "category": "family",
+    "floor": "2-3",
+    "area_m2": 35,
+    "capacity": {
+      "min": 1,
+      "recommended_max": 4,
+      "max": 5
+    },
+    "zones": {
+      "count": 2,
+      "description": "Две раздельные жилые зоны, разделяемые плотной шторой"
+    },
+    "view": "панорамные окна с видом на бассейн",
+    "bathroom": {
+      "private": true,
+      "same_for_all_layouts": true
+    },
+    "features": [
+      "самая просторная категория",
+      "две жилые зоны",
+      "панорамные окна",
+      "вид на бассейн",
+      "подходит семьям",
+      "подходит для длительного отдыха",
+      "комфортное размещение до 5 гостей"
+    ],
+    "equipment": [
+      "кондиционер",
+      "Smart TV",
+      "Wi-Fi",
+      "холодильник",
+      "сейф",
+      "фен",
+      "санузел с душем"
+    ],
+    "guest_items": [
+      "постельное бельё premium",
+      "полотенца premium",
+      "полотенца для бассейна",
+      "косметические принадлежности",
+      "одноразовые тапочки"
+    ],
+    "layouts": [
+      {
+        "id": "double_bed",
+        "title": "Размещение 1–2 гостей",
+        "capacity": 2,
+        "suitable_for": [
+          "пара",
+          "2 взрослых",
+          "гости, которым важно пространство"
+        ]
+      },
+      {
+        "id": "family_4",
+        "title": "Размещение 3–4 гостей",
+        "capacity": 4,
+        "suitable_for": [
+          "семья с детьми",
+          "4 гостя",
+          "длительный отдых"
+        ]
+      },
+      {
+        "id": "family_5",
+        "title": "Размещение до 5 гостей",
+        "capacity": 5,
+        "suitable_for": [
+          "большая семья с детьми"
+        ]
+      },
+      {
+        "id": "baby_cot",
+        "title": "Размещение с детской кроваткой",
+        "capacity": 4,
+        "suitable_for": [
+          "семья с малышом"
+        ]
+      }
+    ],
+    "rules": {
+      "priority_for_4_adults": true,
+      "do_not_offer_for_5_adults": true,
+      "recommend_two_rooms_for_5_adults": true,
+      "baby_cot_until_age": 4,
+      "baby_cot_possible_for_2_guests": true,
+      "baby_cot_possible_for_3_4_guests": "по согласованию",
+      "baby_cot_not_offered_for_5_guests": true
+    }
+  }

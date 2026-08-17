@@ -1,0 +1,82 @@
+[
+  {
+    "scenario_id": "comfort-2",
+    "room_id": "comfort",
+    "title": "Отдых вдвоём",
+    "url": "https://otdyh23.ru/?room=comfort&scenario=comfort-2#rooms",
+    "main_image": "images/02_Комната_Комфорт/01_Для_двух_гостей/00_Комфорт 2 эт — копия.png",
+    "feature": "Уютный вариант для отдыха вдвоём"
+  },
+  {
+    "scenario_id": "comfort-3",
+    "room_id": "comfort",
+    "title": "Комфортное размещение для троих",
+    "url": "https://otdyh23.ru/?room=comfort&scenario=comfort-3#rooms",
+    "main_image": "images/02_Комната_Комфорт/02_Для_трёх_гостей/00_Комфотр 3х.м 2 эт (2).png",
+    "feature": "Комфортное размещение для троих гостей"
+  },
+  {
+    "scenario_id": "comfort-cot",
+    "room_id": "comfort",
+    "title": "Для семьи с малышом",
+    "url": "https://otdyh23.ru/?room=comfort&scenario=comfort-cot#rooms",
+    "main_image": "images/02_Комната_Комфорт/03_С_детской_кроваткой/00_Комфорт 2 эт 2сп+ детская.png",
+    "feature": "Подходит для семьи с малышом, возможна установка детской кроватки"
+  },
+  {
+    "scenario_id": "2-3-guests",
+    "room_id": "deluxe-2",
+    "title": "Отдых вдвоём или втроём",
+    "url": "https://otdyh23.ru/?room=deluxe-2&scenario=2-3-guests#rooms",
+    "main_image": "images/03_Комната_Делюкс_2_этаж/01_Для_2_3_гостей/00_ChatGPT Image 2 мая 2026 г., 12_30_03.png",
+    "feature": "Уютный номер с французским балконом"
+  },
+  {
+    "scenario_id": "4-guests",
+    "room_id": "deluxe-2",
+    "title": "Для семьи до четырёх гостей",
+    "url": "https://otdyh23.ru/?room=deluxe-2&scenario=4-guests#rooms",
+    "main_image": "images/03_Комната_Делюкс_2_этаж/02_Для_4_гостей/00_IMG_20260501_235138.png",
+    "feature": "Размещение для семьи до четырёх гостей с французским балконом"
+  },
+  {
+    "scenario_id": "2-3-guests",
+    "room_id": "deluxe-3",
+    "title": "Отдых вдвоём или втроём",
+    "url": "https://otdyh23.ru/?room=deluxe-3&scenario=2-3-guests#rooms",
+    "main_image": "images/04_Комната_Делюкс_3_этаж/01_Для_2_3_гостей/00_2 мая 2026 г., 12_29_39.png",
+    "feature": "Номер с большим балконом и уличной мебелью"
+  },
+  {
+    "scenario_id": "4-guests",
+    "room_id": "deluxe-3",
+    "title": "Для семьи до четырёх гостей",
+    "url": "https://otdyh23.ru/?room=deluxe-3&scenario=4-guests#rooms",
+    "main_image": "images/04_Комната_Делюкс_3_этаж/02_Для_4_гостей/00_IMG_20260501_235120.png",
+    "feature": "Размещение для семьи до четырёх гостей с большим балконом и зоной отдыха"
+  },
+  {
+    "scenario_id": "2-guests",
+    "room_id": "family",
+    "title": "Просторный отдых вдвоём",
+    "url": "https://otdyh23.ru/?room=family&scenario=2-guests#rooms",
+    "main_image": "images/05_Семейная_комната/01_Для_2_гостей/00_люкс главная .png",
+    "feature": "Просторный вариант для двоих с отдельными зонами отдыха"
+  },
+  {
+    "scenario_id": "3-4-guests",
+    "room_id": "family",
+    "title": "Для семьи из трёх или четырёх человек",
+    "url": "https://otdyh23.ru/?room=family&scenario=3-4-guests#rooms",
+    "main_image": "images/05_Семейная_комната/02_Для_3_4_гостей/00_. 2026 г., 13_13_26.png",
+    "feature": "Комфортное размещение для семьи из трёх или четырёх человек"
+  },
+  {
+    "scenario_id": "5-guests",
+    "room_id": "family",
+    "title": "Размещение до пяти гостей",
+    "url": "https://otdyh23.ru/?room=family&scenario=5-guests#rooms",
+    "main_image": "images/05_Семейная_комната/03_Для_5_гостей/00_семейный на 5х.png",
+    "feature": "Просторное размещение до пяти гостей"
+  }
+]

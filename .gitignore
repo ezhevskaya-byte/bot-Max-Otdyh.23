@@ -7,3 +7,8 @@ dist/
 coverage/
 .idea/
 .vscode/
+.tunnel-url.tmp
+
+# Local photo archives not used by the polling bot
+backend/rooms/**/photos/
+backend/property/**/photos/
