@@ -84,6 +84,11 @@
       "family_room_priority_for_4_adults": true,
       "do_not_offer_as_budget_option": true,
       "no_baby_cot_when_4_guests": true,
+      "if_4_guests_and_cot_needed_offer_family": true,
+      "baby_cot_on_request": true,
+      "baby_cot_included_in_price": true,
+      "baby_cot_possible_for_2_or_3_guests": true,
+      "prefer_when_guest_asks_large_balcony": true,
       "no_baby_cot_with_twin_beds": true
     }
   }

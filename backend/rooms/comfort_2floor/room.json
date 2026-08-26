@@ -98,6 +98,9 @@
     ],
     "rules": {
       "baby_cot_until_age": 4,
+      "baby_cot_on_request": true,
+      "baby_cot_included_in_price": true,
+      "baby_cot_possible": true,
       "recommend_for_family": true,
       "not_recommended_for": [
         "4 полноценных гостя"

@@ -1,16 +1,15 @@
-import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { logger } from './utils/logger.js';
-import { SYSTEM_PROMPT } from './systemPrompt.js';
-import { buildRoomSelectionHint } from './room-sales-logic.js';
+import { complete, AiProviderError, resolveAiConfig } from './core/ai/provider.js';
+import { routeThenMaybeAskAI } from './core/router.js';
+import { rememberGuestMessage } from './core/guest-context/index.js';
 import {
-  isPhotoRequest,
-  detectRequestedRoom,
-  getRoomPhotoLink,
-  getWebsiteRoomLink
-} from './photo-service.js';
-import { formatRoomLinkMessage } from './room-links.js';
+  prepareAiFallbackCall,
+  getLegacyContextSizes,
+  SYSTEM_CORE,
+  SALES_CORE
+} from './core/knowledge/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,9 +20,6 @@ const PROJECT_ROOT = join(BACKEND_ROOT, '..');
 const API_BASE = process.env.MAX_API_BASE_URL || 'https://platform-api.max.ru';
 const token = process.env.MAX_BOT_TOKEN;
 
-const AI_API_KEY = process.env.AI_API_KEY;
-const AI_API_BASE_URL = process.env.AI_API_BASE_URL || 'https://api.openai.com/v1';
-const AI_MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
 
 const PHOTO_BASE_URL = process.env.PHOTO_BASE_URL || '';
 
@@ -36,6 +32,7 @@ let offset = 0;
 
 const conversations = new Map();
 const MAX_HISTORY_MESSAGES = 12;
+const CHANNEL = 'max';
 
 function getConversation(chatId) {
   if (!conversations.has(chatId)) {
@@ -53,130 +50,6 @@ function addMessageToConversation(chatId, role, content) {
     history.shift();
   }
 }
-
-function readTextFileSafe(path) {
-  if (!existsSync(path)) return '';
-  return readFileSync(path, 'utf-8');
-}
-
-function loadRoomsKnowledge() {
-  const roomsRoot = join(BACKEND_ROOT, 'rooms');
-
-  if (!existsSync(roomsRoot)) {
-    return 'База комнат пока не подключена.';
-  }
-
-  const roomFolders = readdirSync(roomsRoot, { withFileTypes: true })
-    .filter((item) => item.isDirectory())
-    .map((item) => item.name);
-
-  const parts = [];
-
-  for (const folder of roomFolders) {
-    const folderPath = join(roomsRoot, folder);
-
-    parts.push(`
-КОМНАТА: ${folder}
-
-ROOM.JSON:
-${readTextFileSafe(join(folderPath, 'room.json'))}
-
-DESCRIPTION:
-${readTextFileSafe(join(folderPath, 'description.txt'))}
-
-SCENARIOS:
-${readTextFileSafe(join(folderPath, 'scenarios.txt'))}
-`);
-  }
-
-  return parts.join('\n\n-----------------------------\n\n');
-}
-
-function loadPropertyKnowledge() {
-  const propertyRoot = join(BACKEND_ROOT, 'property');
-
-  if (!existsSync(propertyRoot)) {
-    return 'База территории пока не подключена.';
-  }
-
-  const folders = readdirSync(propertyRoot, { withFileTypes: true })
-    .filter((item) => item.isDirectory())
-    .map((item) => item.name);
-
-  const parts = [];
-
-  for (const folder of folders) {
-    const folderPath = join(propertyRoot, folder);
-
-    parts.push(`
-ОБЪЕКТ: ${folder}
-
-DESCRIPTION:
-${readTextFileSafe(join(folderPath, 'description.txt'))}
-
-SCENARIOS:
-${readTextFileSafe(join(folderPath, 'scenarios.txt'))}
-`);
-  }
-
-  return parts.join('\n\n-----------------------------\n\n');
-}
-
-function loadPoliciesKnowledge() {
-  const policiesRoot = join(BACKEND_ROOT, 'policies');
-
-  if (!existsSync(policiesRoot)) {
-    return 'База правил пока не подключена.';
-  }
-
-  return readdirSync(policiesRoot)
-    .filter((file) => file.endsWith('.txt'))
-    .sort()
-    .map((file) => `
-POLICY FILE: ${file}
-
-${readTextFileSafe(join(policiesRoot, file))}
-`)
-    .join('\n\n-----------------------------\n\n');
-}
-
-function loadTextFilesFromFolder(folderPath, label) {
-  if (!existsSync(folderPath)) return [];
-
-  return readdirSync(folderPath)
-    .filter((file) => file.endsWith('.txt'))
-    .sort()
-    .map((file) => {
-      const filePath = join(folderPath, file);
-      if (!existsSync(filePath) || !statSync(filePath).isFile()) return '';
-      const content = readTextFileSafe(filePath);
-      if (!content.trim()) return '';
-
-      return `
-${label}: ${file}
-PATH: ${filePath}
-
-${content}
-`;
-    })
-    .filter(Boolean);
-}
-
-function loadPromptsKnowledge() {
-  const parts = [
-    ...loadTextFilesFromFolder(join(BACKEND_ROOT, 'prompts'), 'PROMPT FILE'),
-    ...loadTextFilesFromFolder(join(PROJECT_ROOT, 'prompts'), 'PROMPT FILE')
-  ];
-
-  return parts.length
-    ? parts.join('\n\n-----------------------------\n\n')
-    : 'Дополнительные sales prompt пока не подключены.';
-}
-
-const ROOMS_KNOWLEDGE = loadRoomsKnowledge();
-const PROPERTY_KNOWLEDGE = loadPropertyKnowledge();
-const POLICIES_KNOWLEDGE = loadPoliciesKnowledge();
-const PROMPTS_KNOWLEDGE = loadPromptsKnowledge();
 
 async function sendMessage(chatId, text) {
   const response = await fetch(`${API_BASE}/messages?chat_id=${encodeURIComponent(chatId)}`, {
@@ -219,122 +92,38 @@ function buildPublicPhotoUrl(photoPath) {
     .join('/')}`;
 }
 
-async function trySendRoomPhotos(chatId, userText) {
-  const lastAssistantMessage = getLastAssistantMessage(chatId);
-  const roomKey = detectRequestedRoom(userText, lastAssistantMessage);
-  const websiteLink = getWebsiteRoomLink(roomKey, userText, lastAssistantMessage);
-
-  logger.info('Photo request detected', {
-    roomKey,
-    websiteLink
-  });
-
-  if (websiteLink) {
-    await sendMessage(chatId, formatRoomLinkMessage(websiteLink));
-    return true;
-  }
-
-  if (!roomKey) {
-    await sendMessage(
-      chatId,
-      'Конечно, покажу фото. Уточните, пожалуйста, какую категорию номера хотите посмотреть: Комфорт, Делюкс 2 этаж, Делюкс 3 этаж или Семейный?'
-    );
-    return true;
-  }
-
-  const roomInfo = getRoomPhotoLink(roomKey, userText, lastAssistantMessage);
-
-  if (!roomInfo) {
-    await sendMessage(
-      chatId,
-      'Конечно, покажу фото. Уточните, пожалуйста, какую категорию номера хотите посмотреть: Комфорт, Делюкс 2 этаж, Делюкс 3 этаж или Семейный?'
-    );
-    return true;
-  }
-
-  const message = [
-    `📸 Фотографии категории «${roomInfo.title}»:`,
-    '',
-    roomInfo.url
-  ].join('\n');
-
-  await sendMessage(chatId, message);
-
-  return true;
-}
-
 async function askAI(chatId, userText) {
-  if (!AI_API_KEY) {
-    return 'AI пока не подключён: не задан AI_API_KEY в .env';
+  const aiConfig = resolveAiConfig();
+
+  if (!aiConfig.apiKey) {
+    return `AI пока не подключён: не задан ${aiConfig.keyEnv} в .env`;
   }
 
   const history = getConversation(chatId);
-  const roomSelectionHint = buildRoomSelectionHint(userText, history);
-
-  const fullSystemPrompt = `${SYSTEM_PROMPT}
-
-ДОПОЛНИТЕЛЬНЫЕ ПРАВИЛА ПРОДАЖ И ПЕРЕГОВОРОВ:
-
-${PROMPTS_KNOWLEDGE}
-
-БАЗА КОМНАТ ГОСТЕВОГО ДОМА:
-
-${ROOMS_KNOWLEDGE}
-
-БАЗА ТЕРРИТОРИИ И ОБЩИХ ЗОН:
-
-${PROPERTY_KNOWLEDGE}
-
-ПРАВИЛА, ПОЛИТИКИ И СТИЛЬ ОБЩЕНИЯ:
-
-${POLICIES_KNOWLEDGE}
-
-ВАЖНО:
-1. Используй базу комнат как главный источник информации о категориях, размещении, сценариях, ограничениях и описаниях.
-2. Используй sales-rules как главный источник логики продаж и ведения гостя к бронированию.
-3. Для состава 2 взрослых + 1 ребёнок сначала предлагай «Комфорт», а «Семейную» только как более просторную альтернативу.
-4. Если гость прямо просит вариант поменьше, компактнее, дешевле или спрашивает почему не «Комфорт» — обязательно подробно расскажи про «Комфорт» и не настаивай на «Семейной».
-5. Не придумывай цены и свободные даты.
-6. Если нужно подтвердить наличие мест, стоимость или бронирование — переводи к администратору Оксане.
-7. Не пиши гостю технические ограничения: «не могу отправить фото», «автоматическая отправка невозможна» и подобные фразы.
-8. Помни контекст диалога: последнюю предложенную комнату, состав гостей, даты и пожелания.
-
-ДОПОЛНИТЕЛЬНАЯ ЖЁСТКАЯ ЛОГИКА ПОДБОРА:
-
-${roomSelectionHint}
-`;
-
-  const response = await fetch(`${AI_API_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${AI_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: fullSystemPrompt
-        },
-        ...history,
-        {
-          role: 'user',
-          content: userText
-        }
-      ],
-      temperature: 0.15
-    })
+  const prepared = prepareAiFallbackCall({
+    text: userText,
+    history,
+    lastAssistantText: getLastAssistantMessage(chatId),
+    channel: CHANNEL,
+    guestId: String(chatId)
   });
+  logger.info('AI fallback context', prepared.diagnostics);
 
-  const data = await response.json();
+  try {
+    const answer = await complete({
+      system: prepared.system,
+      messages: prepared.messages,
+      temperature: 0.15
+    });
 
-  if (!response.ok) {
-    console.error('AI error', data);
-    return 'Извините, сейчас не получилось получить ответ. Попробуйте ещё раз чуть позже.';
+    return answer || 'Не смогла сформировать ответ.';
+  } catch (err) {
+    if (err instanceof AiProviderError) {
+      return 'Извините, сейчас не получилось получить ответ. Попробуйте ещё раз чуть позже.';
+    }
+
+    throw err;
   }
-
-  return data.choices?.[0]?.message?.content?.trim() || 'Не смогла сформировать ответ.';
 }
 
 async function processUpdate(update) {
@@ -357,20 +146,29 @@ async function processUpdate(update) {
       return;
     }
 
-    if (isPhotoRequest(text)) {
-      const photoSent = await trySendRoomPhotos(chatId, text);
-    
-      if (photoSent) {
-        return;
-      }
+    rememberGuestMessage({
+      channel: CHANNEL,
+      guestId: String(chatId),
+      text
+    });
+
+    const result = await routeThenMaybeAskAI({
+      text,
+      context: {
+        lastAssistantText: getLastAssistantMessage(chatId)
+      },
+      askAI: (userText) => askAI(chatId, userText)
+    });
+
+    if (result.type === 'room-link') {
+      await sendMessage(chatId, result.text);
+      return;
     }
-    
-    const answer = await askAI(chatId, text);
-    
+
     addMessageToConversation(chatId, 'user', text);
-    addMessageToConversation(chatId, 'assistant', answer);
-    
-    await sendMessage(chatId, answer);
+    addMessageToConversation(chatId, 'assistant', result.text);
+
+    await sendMessage(chatId, result.text);
   } catch (err) {
     console.error('processUpdate error', err);
   }
@@ -403,14 +201,18 @@ async function poll() {
   }
 }
 
+const legacySizes = getLegacyContextSizes();
+
 logger.info('MAX bot polling started');
 logger.info('Knowledge loaded', {
   backendRoot: BACKEND_ROOT,
   projectRoot: PROJECT_ROOT,
-  roomsChars: ROOMS_KNOWLEDGE.length,
-  propertyChars: PROPERTY_KNOWLEDGE.length,
-  policiesChars: POLICIES_KNOWLEDGE.length,
-  promptsChars: PROMPTS_KNOWLEDGE.length,
+  roomsChars: legacySizes.roomsChars,
+  propertyChars: legacySizes.propertyChars,
+  policiesChars: legacySizes.policiesChars,
+  promptsChars: legacySizes.promptsChars,
+  systemCoreChars: SYSTEM_CORE.length,
+  salesCoreChars: SALES_CORE.length,
   photoBaseUrl: PHOTO_BASE_URL || 'not set'
 });
 

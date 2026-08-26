@@ -13,6 +13,7 @@
     "check:max-bot": "node --env-file=.env scripts/check-max-bot.mjs",
     "register:max-webhook": "node --env-file=.env scripts/register-max-webhook.mjs",
     "audit:max": "node --env-file=.env scripts/audit-and-setup-max.mjs",
+    "smoke:openai": "node --env-file=.env scripts/smoke-openai.mjs",
     "kill:3000": "powershell -ExecutionPolicy Bypass -File scripts/kill-port-3000.ps1"
   },
   "engines": {

@@ -26,10 +26,21 @@ if (max.botToken && max.apiBaseUrl.includes('api.max.ru') && !max.apiBaseUrl.inc
   console.warn('[config] MAX_API_BASE_URL должен быть https://platform-api.max.ru');
 }
 
+import { resolveAiConfig } from '../backend/src/core/ai/config.js';
+
 export const ai = {
-  apiKey: process.env.AI_API_KEY || '',
-  apiBaseUrl: process.env.AI_API_BASE_URL || 'https://api.openai.com/v1',
-  model: process.env.AI_MODEL || 'gpt-4o-mini',
+  get provider() {
+    return resolveAiConfig().provider;
+  },
+  get apiKey() {
+    return resolveAiConfig().apiKey;
+  },
+  get apiBaseUrl() {
+    return resolveAiConfig().apiBaseUrl;
+  },
+  get model() {
+    return resolveAiConfig().model;
+  }
 };
 
 export const admin = {

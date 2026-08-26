@@ -6,7 +6,7 @@
     "area_m2": 35,
     "capacity": {
       "min": 1,
-      "recommended_max": 4,
+      "recommended_max": 5,
       "max": 5
     },
     "zones": {
@@ -82,12 +82,13 @@
       }
     ],
     "rules": {
-      "priority_for_4_adults": true,
-      "do_not_offer_for_5_adults": true,
-      "recommend_two_rooms_for_5_adults": true,
+      "priority_for_family_of_4_5": true,
+      "capacity_max": 5,
+      "do_not_refuse_5_adults": true,
+      "recommend_two_rooms_for_company_of_adults": true,
       "baby_cot_until_age": 4,
-      "baby_cot_possible_for_2_guests": true,
-      "baby_cot_possible_for_3_4_guests": "по согласованию",
-      "baby_cot_not_offered_for_5_guests": true
+      "baby_cot_on_request": true,
+      "baby_cot_included_in_price": true,
+      "baby_cot_possible": true
     }
   }

@@ -1,7 +1,10 @@
-export function buildRoomSelectionHint(userText, history = []) {
+import { profileSearchText } from './core/guest-context/profile.js';
+
+export function buildRoomSelectionHint(userText, history = [], guestProfile = null) {
     const fullText = [
       ...history.map((m) => m.content || ''),
-      userText || ''
+      userText || '',
+      profileSearchText(guestProfile)
     ].join(' ').toLowerCase();
   
     const hasTwoAdults =
@@ -32,7 +35,51 @@ export function buildRoomSelectionHint(userText, history = []) {
       fullText.includes('покажи') ||
       fullText.includes('показать') ||
       fullText.includes('посмотреть');
-  
+
+    const wantsCot =
+      fullText.includes('кроватка') ||
+      fullText.includes('детская кроватка');
+
+    const deluxeMentioned =
+      fullText.includes('делюкс');
+
+    const fourGuests =
+      fullText.includes('четверо') ||
+      fullText.includes('4 гост') ||
+      fullText.includes('четыре гост') ||
+      fullText.includes('нас 4') ||
+      fullText.includes('нас четверо');
+
+    const fiveGuests =
+      fullText.includes('пятеро') ||
+      fullText.includes('5 гост') ||
+      fullText.includes('пять гост') ||
+      fullText.includes('нас 5') ||
+      fullText.includes('нас пятеро');
+
+    const familyContext =
+      fullText.includes('семь') ||
+      fullText.includes('семьи') ||
+      fullText.includes('семьёй') ||
+      fullText.includes('семьей') ||
+      fullText.includes('дети') ||
+      fullText.includes('ребён') ||
+      fullText.includes('ребен');
+
+    const adultFriends =
+      fullText.includes('друз') ||
+      fullText.includes('взрослых друз') ||
+      fullText.includes('компани') ||
+      (fullText.includes('взрослых') && !familyContext);
+
+    const largeBalcony =
+      fullText.includes('балкон') &&
+      (fullText.includes('больш') ||
+        fullText.includes('простор') ||
+        fullText.includes('посидеть') ||
+        fullText.includes('мебел') ||
+        fullText.includes('уличн'));
+
     let hint = '';
   
     if (hasTwoAdults && hasOneChild && childSix) {
@@ -75,6 +122,44 @@ export function buildRoomSelectionHint(userText, history = []) {
   `;
     }
   
+    if (wantsCot && deluxeMentioned && fourGuests) {
+      hint += `
+  ЖЁСТКАЯ ЛОГИКА ДЕТСКОЙ КРОВАТКИ:
+
+  Не предлагать конфигурацию «Делюкс = 4 гостя + детская кроватка».
+  В «Делюкс» при размещении 4 гостей кроватку не устанавливаем.
+  Нужно рекомендовать «Семейную»: там кроватку установить можно.
+  `;
+    }
+
+    if (fiveGuests && familyContext) {
+      hint += `
+  ЖЁСТКАЯ ЛОГИКА СЕМЕЙНОЙ ДО 5 ГОСТЕЙ:
+
+  Фактическая вместимость «Семейной» — до 5 гостей.
+  Если 4–5 гостей являются одной семьёй, включая семью со взрослыми детьми, «Семейная» может быть хорошим вариантом.
+  `;
+    }
+
+    if (fiveGuests && adultFriends) {
+      hint += `
+  ЖЁСТКАЯ ЛОГИКА ДЛЯ КОМПАНИИ ВЗРОСЛЫХ:
+
+  Не утверждать, что «Семейная» не вмещает пять гостей и не отказывать автоматически.
+  Мягко предложить две комнаты как более комфортный вариант: больше личного пространства и удобнее для компании взрослых.
+  `;
+    }
+
+    if (largeBalcony) {
+      hint += `
+  ЖЁСТКАЯ ЛОГИКА БАЛКОНА:
+
+  Если гость явно просит большой балкон, просторный балкон, возможность посидеть на балконе или балкон с мебелью — предпочтение «Делюкс», 3 этаж.
+  Сценарий по количеству гостей выбирать отдельно.
+  Не придумывать других различий между «Делюкс» 2 и 3 этажа, кроме балкона.
+  `;
+    }
+
     if (asksPhoto) {
       hint += `
   ЖЁСТКАЯ ЛОГИКА ПРИ ЗАПРОСЕ ФОТОГРАФИЙ:
@@ -95,7 +180,7 @@ export function buildRoomSelectionHint(userText, history = []) {
   
   Если пока нет технической отправки самих фото, НЕ объясняй это гостю.
   Можно мягко дать ссылку на сайт, но без слов “не могу”:
-  «Фотографии можно посмотреть здесь: https://otdyh-23.clients.site/»
+  «Фотографии можно посмотреть здесь: https://otdyh23.ru/»
   
   Важно:
   — не разрушать продажный тон;
