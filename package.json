@@ -5,7 +5,8 @@
   "type": "module",
   "main": "backend/src/index.js",
   "scripts": {
-    "start": "node --env-file=.env backend/src/index.js",
+    "start": "node backend/src/index.js",
+    "start:local": "node --env-file=.env backend/src/index.js",
     "dev": "node --env-file=.env --watch backend/src/index.js",
     "lint": "eslint backend/src integrations",
     "test": "node --test backend/tests/**/*.test.js",
@@ -26,5 +27,8 @@
     "otdyh23"
   ],
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "express": "^4.21.2"
+  }
 }

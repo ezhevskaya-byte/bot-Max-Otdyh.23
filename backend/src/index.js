@@ -1,9 +1,11 @@
+import express from 'express';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { logger } from './utils/logger.js';
 import { complete, AiProviderError, resolveAiConfig } from './core/ai/provider.js';
 import { routeThenMaybeAskAI } from './core/router.js';
 import { rememberGuestMessage } from './core/guest-context/index.js';
+import { handleHealth } from './routes/health.js';
 import {
   prepareAiFallbackCall,
   getLegacyContextSizes,
@@ -22,6 +24,8 @@ const token = process.env.MAX_BOT_TOKEN;
 
 
 const PHOTO_BASE_URL = process.env.PHOTO_BASE_URL || '';
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = '0.0.0.0';
 
 if (!token) {
   console.error('MAX_BOT_TOKEN missing');
@@ -29,6 +33,31 @@ if (!token) {
 }
 
 let offset = 0;
+let shuttingDown = false;
+
+const app = express();
+app.get('/health', handleHealth);
+
+const httpServer = app.listen(PORT, HOST, () => {
+  logger.info('HTTP server started', { port: PORT, host: HOST });
+});
+
+function shutdown(signal) {
+  if (shuttingDown) return;
+
+  shuttingDown = true;
+  logger.info('Shutdown signal received', { signal });
+
+  httpServer.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+
+  setTimeout(() => process.exit(0), 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 const conversations = new Map();
 const MAX_HISTORY_MESSAGES = 12;
@@ -175,7 +204,7 @@ async function processUpdate(update) {
 }
 
 async function poll() {
-  while (true) {
+  while (!shuttingDown) {
     try {
       const response = await fetch(`${API_BASE}/updates?limit=20&offset=${offset}`, {
         headers: {
