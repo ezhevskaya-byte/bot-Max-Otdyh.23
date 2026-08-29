@@ -124,16 +124,30 @@ export function getAllRoomPhotoLinks() {
   return ROOM_PHOTO_LINKS;
 }
 
-export function isPhotoRequest(text = '') {
-  const value = text.toLowerCase();
+export function isPhotoRequest(text = '', lastAssistantText = '') {
+  const value = String(text).toLowerCase().trim();
+  const assistant = String(lastAssistantText).toLowerCase();
 
-  return (
+  const direct =
     value.includes('фото') ||
     value.includes('фотографии') ||
     value.includes('покажи') ||
     value.includes('показать') ||
-    value.includes('посмотреть')
-  );
+    value.includes('посмотреть') ||
+    value.includes('ссылк') ||
+    value.includes('подробнее') ||
+    value.includes('галере');
+
+  if (direct) return true;
+
+  const affirmative = /^(да|давай|хочу|ок|окей|конечно|ага|угу|покажи|покажите)[\s!.?]*$/u.test(value);
+  const photoOffer =
+    (assistant.includes('фото') || assistant.includes('покаж') || assistant.includes('посмотр')) &&
+    (assistant.includes('комфорт') ||
+      assistant.includes('делюкс') ||
+      assistant.includes('семейн'));
+
+  return affirmative && photoOffer;
 }
 
 function hasBabyCotRequest(value) {

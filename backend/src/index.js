@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { logger } from './utils/logger.js';
 import { complete, AiProviderError, resolveAiConfig } from './core/ai/provider.js';
 import { routeThenMaybeAskAI } from './core/router.js';
-import { rememberGuestMessage } from './core/guest-context/index.js';
+import { rememberGuestMessage, resolveGuestProfile } from './core/guest-context/index.js';
+import { sanitizeMaxText } from './core/channel/max-format.js';
 import { handleHealth } from './routes/health.js';
 import {
   prepareAiFallbackCall,
@@ -81,13 +82,15 @@ function addMessageToConversation(chatId, role, content) {
 }
 
 async function sendMessage(chatId, text) {
+  const safeText = sanitizeMaxText(text);
+
   const response = await fetch(`${API_BASE}/messages?chat_id=${encodeURIComponent(chatId)}`, {
     method: 'POST',
     headers: {
       Authorization: token,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ text })
+    body: JSON.stringify({ text: safeText })
   });
 
   const data = await response.text();
@@ -181,11 +184,21 @@ async function processUpdate(update) {
       text
     });
 
+    const history = getConversation(chatId);
+    const guestProfile = resolveGuestProfile({
+      channel: CHANNEL,
+      guestId: String(chatId),
+      text,
+      history
+    });
+
     const result = await routeThenMaybeAskAI({
       text,
       context: {
         lastAssistantText: getLastAssistantMessage(chatId)
       },
+      history,
+      guestProfile,
       askAI: (userText) => askAI(chatId, userText)
     });
 

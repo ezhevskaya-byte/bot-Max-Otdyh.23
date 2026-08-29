@@ -46,3 +46,26 @@ export function formatRoomLinkMessage(link) {
     link.url
   ].join('\n');
 }
+
+const CATEGORY_TITLES = {
+  comfort: 'Комфорт',
+  'deluxe-2': 'Делюкс',
+  'deluxe-3': 'Делюкс',
+  family: 'Семейная'
+};
+
+export function formatRoomPhotoMessage(link, categoryTitle = null) {
+  if (!link) return '';
+
+  const title =
+    categoryTitle ||
+    CATEGORY_TITLES[link.room_id] ||
+    link.title;
+
+  return [
+    `Конечно. Вот фотографии категории «${title}»:`,
+    link.url,
+    '',
+    'Если хотите, я также могу подсказать, насколько этот вариант подойдёт именно вашему составу гостей.'
+  ].join('\n');
+}

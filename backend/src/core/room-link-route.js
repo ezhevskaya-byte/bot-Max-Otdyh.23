@@ -4,7 +4,7 @@ import {
   getRoomPhotoLink,
   getWebsiteRoomLink
 } from '../photo-service.js';
-import { formatRoomLinkMessage } from '../room-links.js';
+import { formatRoomPhotoMessage } from '../room-links.js';
 
 export const PHOTO_CLARIFY_TEXT =
   'Конечно, покажу фото. Уточните, пожалуйста, какую категорию номера хотите посмотреть: Комфорт, Делюкс 2 этаж, Делюкс 3 этаж или Семейный?';
@@ -14,7 +14,7 @@ export const PHOTO_CLARIFY_TEXT =
  * Не переписывает photo-service / room-links, только собирает ответ.
  */
 export function matchRoomLink({ text, lastAssistantText = '' }) {
-  if (!isPhotoRequest(text)) return null;
+  if (!isPhotoRequest(text, lastAssistantText)) return null;
 
   const roomKey = detectRequestedRoom(text, lastAssistantText);
   const websiteLink = getWebsiteRoomLink(roomKey, text, lastAssistantText);
@@ -23,7 +23,7 @@ export function matchRoomLink({ text, lastAssistantText = '' }) {
     return {
       handled: true,
       type: 'room-link',
-      text: formatRoomLinkMessage(websiteLink),
+      text: formatRoomPhotoMessage(websiteLink),
       data: {
         roomKey,
         room_id: websiteLink.room_id,
@@ -56,7 +56,10 @@ export function matchRoomLink({ text, lastAssistantText = '' }) {
   return {
     handled: true,
     type: 'room-link',
-    text: [`📸 Фотографии категории «${roomInfo.title}»:`, '', roomInfo.url].join('\n'),
+    text: formatRoomPhotoMessage(
+      { room_id: roomKey, title: roomInfo.title, url: roomInfo.url },
+      roomInfo.title
+    ),
     data: {
       roomKey,
       fallbackPhoto: true,
@@ -64,3 +67,4 @@ export function matchRoomLink({ text, lastAssistantText = '' }) {
     }
   };
 }
+

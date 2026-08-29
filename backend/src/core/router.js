@@ -2,6 +2,7 @@ import { normalizeText } from './text-normalize.js';
 import { matchRoomLink } from './room-link-route.js';
 import { matchCommand } from './commands.js';
 import { matchFaq } from './faq/answers.js';
+import { getCompositionClarificationResponse } from './guest-context/composition-gate.js';
 
 function aiFallback() {
   return {
@@ -58,16 +59,40 @@ export function routeMessage({ text, context = {} } = {}) {
   return aiFallback();
 }
 
+function matchCompositionGate({ text, history = [], guestProfile = null }) {
+  const clarification = getCompositionClarificationResponse(text, guestProfile, history);
+  if (!clarification) return null;
+
+  return {
+    handled: false,
+    type: 'ai',
+    text: clarification,
+    data: { compositionGate: true }
+  };
+}
+
 /**
  * MAX-слой передаёт askAI как зависимость.
  * Provider вызывается только при handled=false.
  */
-export async function routeThenMaybeAskAI({ text, context = {}, askAI }) {
+export async function routeThenMaybeAskAI({
+  text,
+  context = {},
+  history = [],
+  guestProfile = null,
+  askAI
+}) {
   const routed = routeMessage({ text, context });
   logRoute(routed);
 
   if (routed.handled) {
     return routed;
+  }
+
+  const composition = matchCompositionGate({ text, history, guestProfile });
+  if (composition) {
+    console.log('[ROUTER] composition-gate');
+    return composition;
   }
 
   const answer = await askAI(text);

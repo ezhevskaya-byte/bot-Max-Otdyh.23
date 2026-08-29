@@ -132,9 +132,15 @@ function extractPartySize(normalized) {
   );
   if (fromPhrase != null) return fromPhrase;
 
+  const onGuests = firstMatchCount(
+    normalized,
+    new RegExp(`(?:на|для)\\s+(\\d+|${COUNT_ALT})\\s*(?:гост[а-я]*|человек[а-я]*|чел)`, 'u')
+  );
+  if (onGuests != null) return onGuests;
+
   const guests = firstMatchCount(
     normalized,
-    new RegExp(`(\\d+|${COUNT_ALT})\\s*(?:гост[а-я]*|человек[а-я]*|чел)\\b`, 'u')
+    new RegExp(`(\\d+|${COUNT_ALT})\\s*(?:гост[а-я]*|человек[а-я]*|чел)`, 'u')
   );
   if (guests != null) return guests;
 
