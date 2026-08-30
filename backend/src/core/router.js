@@ -46,7 +46,8 @@ export function routeMessage({ text, context = {} } = {}) {
   if (!raw) return aiFallback();
 
   const lastAssistantText = context.lastAssistantText || '';
-  const roomLink = matchRoomLink({ text: raw, lastAssistantText });
+  const guestProfile = context.guestProfile || null;
+  const roomLink = matchRoomLink({ text: raw, lastAssistantText, guestProfile });
   if (roomLink) return roomLink;
 
   const normalized = normalizeText(raw);
@@ -82,7 +83,13 @@ export async function routeThenMaybeAskAI({
   guestProfile = null,
   askAI
 }) {
-  const routed = routeMessage({ text, context });
+  const routed = routeMessage({
+    text,
+    context: {
+      ...context,
+      guestProfile: context.guestProfile || guestProfile
+    }
+  });
   logRoute(routed);
 
   if (routed.handled) {

@@ -153,7 +153,7 @@ export function isPhotoRequest(text = '', lastAssistantText = '') {
 function hasBabyCotRequest(value) {
   return (
     value.includes('детская кроватка') ||
-    value.includes('кроватка') ||
+    value.includes('кроватк') ||
     value.includes('малыш')
   );
 }
@@ -173,9 +173,28 @@ function hasThreeGuests(value) {
     value.includes('3 гост') ||
     value.includes('три гост') ||
     value.includes('трое гост') ||
+    value.includes('для трёх гост') ||
+    value.includes('для трех гост') ||
+    value.includes('трёх гост') ||
+    value.includes('трех гост') ||
+    value.includes('три человек') ||
     value.includes('трёх человек') ||
     value.includes('трех человек')
   );
+}
+
+function comfortPartySizeFromProfile(guestProfile) {
+  if (!guestProfile) return null;
+
+  const size =
+    guestProfile.partySize != null
+      ? guestProfile.partySize
+      : guestProfile.adults != null || guestProfile.children != null
+        ? (guestProfile.adults || 0) + (guestProfile.children || 0)
+        : null;
+
+  if (size === 2 || size === 3) return size;
+  return null;
 }
 
 function hasFourGuests(value) {
@@ -207,8 +226,15 @@ function hasFiveGuests(value) {
   );
 }
 
-function detectComfortWebsiteScenario(value) {
-  if (hasBabyCotRequest(value)) return 'comfort-cot';
+function detectComfortWebsiteScenario(value, guestProfile = null) {
+  if (hasBabyCotRequest(value) || guestProfile?.babyCot === true) {
+    return 'comfort-cot';
+  }
+
+  const profileSize = comfortPartySizeFromProfile(guestProfile);
+  if (profileSize === 3) return 'comfort-3';
+  if (profileSize === 2) return 'comfort-2';
+
   if (hasThreeGuests(value)) return 'comfort-3';
   return 'comfort-2';
 }
@@ -224,14 +250,19 @@ function detectFamilyWebsiteScenario(value) {
   return '2-guests';
 }
 
-export function resolveWebsiteScenario(roomKey, text = '', lastAssistantText = '') {
+export function resolveWebsiteScenario(
+  roomKey,
+  text = '',
+  lastAssistantText = '',
+  guestProfile = null
+) {
   const roomId = ROOM_KEY_TO_WEBSITE_ID[roomKey];
   if (!roomId) return null;
 
   const value = `${text} ${lastAssistantText}`.toLowerCase();
 
   if (roomKey === 'comfort_2floor') {
-    return { roomId, scenarioId: detectComfortWebsiteScenario(value) };
+    return { roomId, scenarioId: detectComfortWebsiteScenario(value, guestProfile) };
   }
 
   if (roomKey === 'deluxe_2floor' || roomKey === 'deluxe_3floor') {
@@ -245,8 +276,13 @@ export function resolveWebsiteScenario(roomKey, text = '', lastAssistantText = '
   return null;
 }
 
-export function getWebsiteRoomLink(roomKey, text = '', lastAssistantText = '') {
-  const resolved = resolveWebsiteScenario(roomKey, text, lastAssistantText);
+export function getWebsiteRoomLink(
+  roomKey,
+  text = '',
+  lastAssistantText = '',
+  guestProfile = null
+) {
+  const resolved = resolveWebsiteScenario(roomKey, text, lastAssistantText, guestProfile);
   if (!resolved) return null;
 
   return findRoomLink(resolved.roomId, resolved.scenarioId);

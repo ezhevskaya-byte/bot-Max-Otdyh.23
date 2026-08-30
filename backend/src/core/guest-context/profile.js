@@ -29,6 +29,42 @@ const COUNT_WORDS = {
 
 const COUNT_ALT = Object.keys(COUNT_WORDS).join('|');
 
+/** Словесные числа возраста ребёнка. Не общий NLP — только разумный детский диапазон. */
+const AGE_WORDS = {
+  один: 1,
+  одна: 1,
+  одно: 1,
+  два: 2,
+  две: 2,
+  три: 3,
+  четыре: 4,
+  пять: 5,
+  шесть: 6,
+  семь: 7,
+  восемь: 8,
+  девять: 9,
+  десять: 10,
+  одиннадцать: 11,
+  двенадцать: 12,
+  тринадцать: 13,
+  четырнадцать: 14,
+  пятнадцать: 15,
+  шестнадцать: 16,
+  семнадцать: 17
+};
+
+const AGE_ALT = Object.keys(AGE_WORDS).join('|');
+
+function parseAgeToken(token) {
+  if (!token) return null;
+  if (AGE_WORDS[token] != null) return AGE_WORDS[token];
+  if (/^\d+$/.test(token)) {
+    const n = Number(token);
+    return n >= 0 && n <= 17 ? n : null;
+  }
+  return null;
+}
+
 function parseCountToken(token) {
   if (!token) return null;
   if (COUNT_WORDS[token] != null) return COUNT_WORDS[token];
@@ -109,7 +145,10 @@ function extractChildrenCount(normalized) {
 function extractChildrenAges(normalized) {
   const ages = [];
   const patterns = [
-    /ребен(?:ка|ку|ок|ком)?\s+(\d+)\s*(?:год|года|лет|месяц)/g,
+    new RegExp(
+      `ребен(?:ка|ку|ок|ком)?\\s+(\\d+|${AGE_ALT})\\s*(?:год|года|лет|месяц)`,
+      'g'
+    ),
     /детям\s+(\d+)\s+и\s+(\d+)/g,
     /дети\s+(\d+)\s*(?:,|и)\s*(\d+)/g,
     /возраст(?:ы)?\s+(\d+)\s*(?:,|и)\s*(\d+)/g
@@ -117,8 +156,10 @@ function extractChildrenAges(normalized) {
 
   for (const pattern of patterns) {
     for (const match of normalized.matchAll(pattern)) {
-      if (match[1]) ages.push(Number(match[1]));
-      if (match[2]) ages.push(Number(match[2]));
+      const first = parseAgeToken(match[1]);
+      const second = parseAgeToken(match[2]);
+      if (first != null) ages.push(first);
+      if (second != null) ages.push(second);
     }
   }
 

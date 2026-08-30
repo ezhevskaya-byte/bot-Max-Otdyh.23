@@ -13,11 +13,11 @@ export const PHOTO_CLARIFY_TEXT =
  * Существующий zero-token путь комнат.
  * Не переписывает photo-service / room-links, только собирает ответ.
  */
-export function matchRoomLink({ text, lastAssistantText = '' }) {
+export function matchRoomLink({ text, lastAssistantText = '', guestProfile = null }) {
   if (!isPhotoRequest(text, lastAssistantText)) return null;
 
   const roomKey = detectRequestedRoom(text, lastAssistantText);
-  const websiteLink = getWebsiteRoomLink(roomKey, text, lastAssistantText);
+  const websiteLink = getWebsiteRoomLink(roomKey, text, lastAssistantText, guestProfile);
 
   if (websiteLink) {
     return {
