@@ -123,10 +123,14 @@ export function isGuestProfileEmpty(profile) {
 }
 
 function extractAdults(normalized) {
-  return firstMatchCount(
+  const counted = firstMatchCount(
     normalized,
     new RegExp(`(\\d+|${COUNT_ALT})\\s*взросл`, 'u')
   );
+  if (counted != null) return counted;
+  // «оба взрослые» / «мы вдвоём, оба взрослые»
+  if (includesAny(normalized, ['оба взросл', 'обе взросл'])) return 2;
+  return null;
 }
 
 function extractChildrenCount(normalized) {
@@ -149,6 +153,10 @@ function extractChildrenAges(normalized) {
       `ребен(?:ка|ку|ок|ком)?\\s+(\\d+|${AGE_ALT})\\s*(?:год|года|лет|месяц)`,
       'g'
     ),
+    // «двое детей 5 и 9 лет» / «детей 5 и 9 лет»
+    /дет(?:ей|и)\s+(\d+)\s+и\s+(\d+)\s*(?:год|года|лет)?/g,
+    // «дети 5 лет и 9 лет»
+    /дети\s+(\d+)\s*(?:год|года|лет)\s+и\s+(\d+)\s*(?:год|года|лет)/g,
     /детям\s+(\d+)\s+и\s+(\d+)/g,
     /дети\s+(\d+)\s*(?:,|и)\s*(\d+)/g,
     /возраст(?:ы)?\s+(\d+)\s*(?:,|и)\s*(\d+)/g
@@ -179,10 +187,13 @@ function extractPartySize(normalized) {
   );
   if (onGuests != null) return onGuests;
 
-  // «на троих» / «для двоих» без слова «человек» (не путать с «на 2 этаже»)
+  // «на троих» / «для двоих» без слова «человек».
+  // Не путать с этажом и длительностью: «на 2 этаже», «на 3 дня», «трое суток».
+  const durationOrFloor =
+    '(?:этаж|день|дня|дней|сутки|суток|ночь|ночи|ночей)';
   const onCountOnly = firstMatchCount(
     normalized,
-    new RegExp(`(?:на|для)\\s+(\\d+|${COUNT_ALT})(?!\\s*этаж)`, 'u')
+    new RegExp(`(?:на|для)\\s+(\\d+|${COUNT_ALT})(?!\\s*${durationOrFloor})`, 'u')
   );
   if (onCountOnly != null) return onCountOnly;
 

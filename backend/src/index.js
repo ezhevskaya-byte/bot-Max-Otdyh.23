@@ -6,6 +6,7 @@ import { complete, AiProviderError, resolveAiConfig } from './core/ai/provider.j
 import { routeThenMaybeAskAI } from './core/router.js';
 import { rememberGuestMessage, resolveGuestProfile } from './core/guest-context/index.js';
 import { sanitizeMaxText } from './core/channel/max-format.js';
+import { attachFirstContactGreeting } from './core/channel/first-greeting.js';
 import { handleHealth } from './routes/health.js';
 import {
   prepareAiFallbackCall,
@@ -174,7 +175,14 @@ async function processUpdate(update) {
     }
 
     if (!text.trim()) {
-      await sendMessage(chatId, 'Напишите, пожалуйста, ваш вопрос текстом.');
+      const history = getConversation(chatId);
+      const reply = attachFirstContactGreeting(
+        { text: 'Напишите, пожалуйста, ваш вопрос текстом.' },
+        history
+      );
+      addMessageToConversation(chatId, 'user', text || '');
+      addMessageToConversation(chatId, 'assistant', reply.text);
+      await sendMessage(chatId, reply.text);
       return;
     }
 
@@ -192,7 +200,7 @@ async function processUpdate(update) {
       history
     });
 
-    const result = await routeThenMaybeAskAI({
+    const routed = await routeThenMaybeAskAI({
       text,
       context: {
         lastAssistantText: getLastAssistantMessage(chatId)
@@ -202,10 +210,7 @@ async function processUpdate(update) {
       askAI: (userText) => askAI(chatId, userText)
     });
 
-    if (result.type === 'room-link') {
-      await sendMessage(chatId, result.text);
-      return;
-    }
+    const result = attachFirstContactGreeting(routed, history);
 
     addMessageToConversation(chatId, 'user', text);
     addMessageToConversation(chatId, 'assistant', result.text);

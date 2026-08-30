@@ -48,9 +48,10 @@ function isRoomSeekingMessage(normalized) {
   return includesAny(normalized, ROOM_SEEKING_MARKERS);
 }
 
-/** Сообщения вроде «нас трое», где важен состав, даже без слов «номер/комната». */
+/** Сообщения вроде «нас трое» / «мы вдвоём», где важен состав. */
 function isGuestCountContext(normalized) {
   if (isRoomSeekingMessage(normalized)) return true;
+  if (includesAny(normalized, ['вдвоем', 'втроем'])) return true;
   // \b ненадёжен для кириллицы в JS — используем lookahead
   if (/(?:^|\s)нас\s+(\d+|двое|трое|четверо|пятеро)(?![а-яё])/u.test(normalized)) {
     return true;

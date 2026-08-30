@@ -7,6 +7,7 @@ import {
 } from '../src/core/guest-context/composition-gate.js';
 import { emptyGuestProfile, extractGuestFacts } from '../src/core/guest-context/profile.js';
 import { routeMessage, routeThenMaybeAskAI } from '../src/core/router.js';
+import { attachFirstContactGreeting } from '../src/core/channel/first-greeting.js';
 import { buildRoomSelectionHint } from '../src/room-sales-logic.js';
 import { SALES_CORE } from '../src/core/knowledge/system-core.js';
 import { buildLlmSystemPrompt } from '../src/core/knowledge/prompt.js';
@@ -48,7 +49,7 @@ describe('composition gate: сначала состав гостей', () => {
     assert.doesNotMatch(clarification, /делюкс/i);
 
     let providerCalled = false;
-    const result = await routeThenMaybeAskAI({
+    const routed = await routeThenMaybeAskAI({
       text,
       history: [],
       guestProfile: profile,
@@ -57,6 +58,7 @@ describe('composition gate: сначала состав гостей', () => {
         return 'Не должно вызываться';
       }
     });
+    const result = attachFirstContactGreeting(routed, []);
 
     assert.equal(providerCalled, false);
     assert.equal(result.data?.compositionGate, true);

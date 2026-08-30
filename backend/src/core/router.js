@@ -3,7 +3,6 @@ import { matchRoomLink } from './room-link-route.js';
 import { matchCommand } from './commands.js';
 import { matchFaq } from './faq/answers.js';
 import { getCompositionClarificationResponse } from './guest-context/composition-gate.js';
-import { withFirstContactGreeting } from './channel/first-greeting.js';
 
 function aiFallback() {
   return {
@@ -41,6 +40,7 @@ export function logRoute(result) {
 /**
  * Детерминированный router.
  * Не знает про MAX chat_id, не вызывает LLM, не хранит историю.
+ * Greeting намеренно не применяется здесь — только в MAX processUpdate / attachFirstContactGreeting.
  */
 export function routeMessage({ text, context = {} } = {}) {
   const raw = String(text || '').trim();
@@ -73,17 +73,10 @@ function matchCompositionGate({ text, history = [], guestProfile = null }) {
   };
 }
 
-function withGreetingIfFirst(result, history) {
-  if (!result || !result.text) return result;
-  return {
-    ...result,
-    text: withFirstContactGreeting(result.text, history)
-  };
-}
-
 /**
  * MAX-слой передаёт askAI как зависимость.
  * Provider вызывается только при handled=false.
+ * First-contact greeting применяется снаружи (processUpdate), чтобы покрыть все типы ответов один раз.
  */
 export async function routeThenMaybeAskAI({
   text,
@@ -102,23 +95,20 @@ export async function routeThenMaybeAskAI({
   logRoute(routed);
 
   if (routed.handled) {
-    return withGreetingIfFirst(routed, history);
+    return routed;
   }
 
   const composition = matchCompositionGate({ text, history, guestProfile });
   if (composition) {
     console.log('[ROUTER] composition-gate');
-    return withGreetingIfFirst(composition, history);
+    return composition;
   }
 
   const answer = await askAI(text);
-  return withGreetingIfFirst(
-    {
-      handled: false,
-      type: 'ai',
-      text: answer,
-      data: { fallback: true }
-    },
-    history
-  );
+  return {
+    handled: false,
+    type: 'ai',
+    text: answer,
+    data: { fallback: true }
+  };
 }

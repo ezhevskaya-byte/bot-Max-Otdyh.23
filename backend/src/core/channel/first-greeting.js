@@ -1,6 +1,7 @@
 /**
  * Первое сообщение AI в диалоге — с коротким приветствием.
  * Повторные ответы не начинают с «Здравствуйте».
+ * Единая точка применения: attachFirstContactGreeting (MAX processUpdate + тесты).
  */
 
 export function isFirstAssistantReply(history = []) {
@@ -25,4 +26,16 @@ export function withFirstContactGreeting(text, history = []) {
   if (!isFirstAssistantReply(history)) return body;
   if (alreadyHasGreeting(body)) return body;
   return `Здравствуйте! ${body}`;
+}
+
+/**
+ * Единый wrapper для исходящего route-результата.
+ * Не дублирует приветствие, если оно уже есть в тексте.
+ */
+export function attachFirstContactGreeting(result, history = []) {
+  if (!result || result.text == null || result.text === '') return result;
+  return {
+    ...result,
+    text: withFirstContactGreeting(result.text, history)
+  };
 }
