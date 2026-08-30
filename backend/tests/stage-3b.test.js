@@ -131,7 +131,7 @@ describe('STAGE 3B: точный room retrieval', () => {
     assert.doesNotMatch(result.context, /максимум 4 гостя/i);
   });
 
-  it('5. 2 взрослых + ребёнок 2 года, нужна кроватка → подходящие секции + BABY_COT', () => {
+  it('5. 2 взрослых + ребёнок 2 года, нужна кроватка → Comfort + Deluxe-альтернатива + BABY_COT', () => {
     const result = retrieveKnowledge({
       text: '2 взрослых + ребёнок 2 года, нужна кроватка'
     });
@@ -139,8 +139,11 @@ describe('STAGE 3B: точный room retrieval', () => {
     assert.equal(hasTopic(result, TOPICS.BABY_COT), true);
     assert.equal(hasRoom(result, ROOM_SECTIONS.COMFORT), true);
     assert.equal(hasRoom(result, ROOM_SECTIONS.GENERAL_RULES), true);
-    assert.equal(hasRoom(result, ROOM_SECTIONS.DELUXE_2), false);
-    assert.equal(hasRoom(result, ROOM_SECTIONS.DELUXE_3), false);
+    // Лестница: Comfort → Deluxe (не пропуск сразу к Family)
+    assert.equal(
+      hasRoom(result, ROOM_SECTIONS.DELUXE_2) || hasRoom(result, ROOM_SECTIONS.DELUXE_3),
+      true
+    );
     assert.match(result.context, /без дополнительной платы|входит в стоимость/i);
     assert.match(result.context, /до 4 лет/i);
     assert.match(result.context, /в «Комфорт» установить можно/i);

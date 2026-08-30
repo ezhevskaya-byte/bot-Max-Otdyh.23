@@ -1,5 +1,5 @@
 import { includesAny, isAdvisoryRequest, normalizeText } from '../text-normalize.js';
-import { emptyGuestProfile } from '../guest-context/profile.js';
+import { emptyGuestProfile, extractGuestFacts, mergeGuestProfile } from '../guest-context/profile.js';
 import { buildTopicContext, SAFE_FALLBACK_TOPICS, TOPICS } from './sections.js';
 import { ROOM_SECTIONS, selectRoomSections } from './rooms.js';
 
@@ -33,7 +33,7 @@ function hasGuestComposition(normalized, guestProfile = emptyGuestProfile()) {
       'взрослых друз',
       'компани'
     ]) ||
-    /\d+\s*(взросл|дет|гост|человек|чел)\b/.test(normalized) ||
+    /\d+\s*(взросл|дет|гост|человек|чел)/.test(normalized) ||
     /\b(двое|трое|четверо|пятеро)\b/.test(normalized)
   );
 }
@@ -322,7 +322,10 @@ function applyConversationContext(topics, normalized, conversationContext = {}) 
  */
 export function retrieveKnowledge({ text, conversationContext = {} } = {}) {
   const normalized = normalizeText(text);
-  const guestProfile = conversationContext.guestProfile || emptyGuestProfile();
+  const guestProfile = mergeGuestProfile(
+    conversationContext.guestProfile || emptyGuestProfile(),
+    extractGuestFacts(text)
+  );
   const matched = detectCurrentTopics(normalized, guestProfile);
   applyConversationContext(matched, normalized, conversationContext);
 
@@ -361,7 +364,11 @@ export function retrieveKnowledge({ text, conversationContext = {} } = {}) {
       })
     : [];
 
-  const context = buildTopicContext(ordered, { roomSections });
+  const context = buildTopicContext(ordered, {
+    roomSections,
+    guestProfile,
+    normalized: roomQuery
+  });
 
   return {
     topics: ordered,

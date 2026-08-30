@@ -1,11 +1,30 @@
 import { includesAny } from '../text-normalize.js';
-import { emptyGuestProfile, guestPartySize } from '../guest-context/profile.js';
+import {
+  emptyGuestProfile,
+  extractGuestFacts,
+  guestPartySize,
+  mergeGuestProfile
+} from '../guest-context/profile.js';
 import {
   joinSections,
-  ROOM_FOLDER_KNOWLEDGE,
+  ROOM_FOLDER_MAP,
   sliceByHeading,
   KNOWLEDGE_FILES
 } from './loader.js';
+import { buildRoomFolderLiveKnowledge } from './room-live.js';
+
+/** Для маршрутизации: если профиль пуст, берём состав из текущего текста. */
+function profileForRouting(guestProfile, normalized = '') {
+  const current = guestProfile || emptyGuestProfile();
+  if (
+    current.adults != null ||
+    current.children != null ||
+    (current.partySize != null && current.childrenAges?.length)
+  ) {
+    return current;
+  }
+  return mergeGuestProfile(current, extractGuestFacts(normalized));
+}
 
 export const ROOM_SECTIONS = {
   COMFORT: 'room_comfort',
@@ -23,10 +42,11 @@ export const ALL_ROOM_SECTIONS = [
   ROOM_SECTIONS.FAMILY
 ];
 
-/** Низкая уверенность по категории: 2–3 раздела, не полный dump ~34k. */
+/** Низкая уверенность: Comfort + Deluxe + Family, без полного dump всех сценариев. */
 export const LOW_CONFIDENCE_ROOM_SECTIONS = [
   ROOM_SECTIONS.GENERAL_RULES,
   ROOM_SECTIONS.COMFORT,
+  ROOM_SECTIONS.DELUXE_2,
   ROOM_SECTIONS.FAMILY
 ];
 
@@ -61,10 +81,10 @@ export function buildRoomGeneralRulesSection() {
     '— если нужны 4 гостя и кроватка — рекомендовать «Семейную»;',
     '— в «Семейной» кроватку установить можно.',
     '',
-    'Логика комфорта размещения:',
-    '— 2 взрослых + 1 ребёнок: в первую очередь «Комфорт»; «Семейную» — как более просторную альтернативу.',
+    'Логика подбора и альтернатив:',
+    '— 2 взрослых + 1 ребёнок: сначала «Комфорт»; если недоступен или нужна альтернатива — подходящий «Делюкс» (2 или 3 этаж по балкону), затем «Семейная», если она действительно подходит составу и пожеланиям.',
     '— 2 взрослых + 2 ребёнка: приоритет «Семейная».',
-    '— 3 взрослых: «Комфорт» допустим как компактный вариант; если нужно больше пространства — «Делюкс» или «Семейная».',
+    '— 3 взрослых / 3 гостя: можно рассмотреть «Комфорт» или «Делюкс» по составу и пожеланиям; «Семейную» — если нужен больший простор или две зоны.',
     '— 4 гостя: «Делюкс» или «Семейная»; при кроватке — только «Семейная».',
     '— семья из 5, включая семью со взрослыми детьми: «Семейная» допустима и может быть хорошим вариантом.',
     '',
@@ -75,29 +95,26 @@ export function buildRoomGeneralRulesSection() {
     '',
     'Общие принципы подбора:',
     '— подобрать наиболее комфортный и логичный вариант, а не самую дорогую комнату автоматически;',
-    '— сначала основной вариант, затем при необходимости более просторная альтернатива;',
+    '— сначала основной подходящий вариант, затем следующая рациональная альтернатива через её собственные преимущества;',
+    '— не продавать категорию через недостатки другой;',
     '— не придумывать различия «Делюкс» 2 и 3 этажа, кроме балкона: 2 этаж — небольшой французский балкон, 3 этаж — большой балкон с уличной мебелью;',
     '— не подтверждать наличие мест и стоимость без администратора.'
   ]);
 }
 
-const ROOM_SECTION_BUILDERS = {
-  [ROOM_SECTIONS.GENERAL_RULES]: buildRoomGeneralRulesSection,
-  [ROOM_SECTIONS.COMFORT]: () =>
-    joinSections(['РАЗДЕЛ: КОМНАТА КОМФОРТ', ROOM_FOLDER_KNOWLEDGE[ROOM_SECTIONS.COMFORT]]),
-  [ROOM_SECTIONS.DELUXE_2]: () =>
-    joinSections(['РАЗДЕЛ: КОМНАТА ДЕЛЮКС 2 ЭТАЖ', ROOM_FOLDER_KNOWLEDGE[ROOM_SECTIONS.DELUXE_2]]),
-  [ROOM_SECTIONS.DELUXE_3]: () =>
-    joinSections(['РАЗДЕЛ: КОМНАТА ДЕЛЮКС 3 ЭТАЖ', ROOM_FOLDER_KNOWLEDGE[ROOM_SECTIONS.DELUXE_3]]),
-  [ROOM_SECTIONS.FAMILY]: () =>
-    joinSections(['РАЗДЕЛ: КОМНАТА СЕМЕЙНАЯ', ROOM_FOLDER_KNOWLEDGE[ROOM_SECTIONS.FAMILY]])
-};
+function buildLiveRoomSection(title, sectionId, options = {}) {
+  const folder = ROOM_FOLDER_MAP[sectionId];
+  const body = buildRoomFolderLiveKnowledge(folder, options);
+  return joinSections([title, body]);
+}
 
-export function buildRoomSectionsContext(sectionIds = []) {
+export function buildRoomSectionsContext(sectionIds = [], options = {}) {
   const unique = [];
   for (const id of sectionIds) {
-    if (!ROOM_SECTION_BUILDERS[id] || unique.includes(id)) continue;
-    unique.push(id);
+    if (!id || unique.includes(id)) continue;
+    if (id === ROOM_SECTIONS.GENERAL_RULES || ROOM_FOLDER_MAP[id]) {
+      unique.push(id);
+    }
   }
 
   if (unique.length === 0) {
@@ -106,8 +123,28 @@ export function buildRoomSectionsContext(sectionIds = []) {
     unique.unshift(ROOM_SECTIONS.GENERAL_RULES);
   }
 
+  const liveOptions = {
+    guestProfile: options.guestProfile || null,
+    normalized: options.normalized || ''
+  };
+
   return unique
-    .map((id) => ROOM_SECTION_BUILDERS[id]())
+    .map((id) => {
+      if (id === ROOM_SECTIONS.GENERAL_RULES) return buildRoomGeneralRulesSection();
+      if (id === ROOM_SECTIONS.COMFORT) {
+        return buildLiveRoomSection('РАЗДЕЛ: КОМНАТА КОМФОРТ', id, liveOptions);
+      }
+      if (id === ROOM_SECTIONS.DELUXE_2) {
+        return buildLiveRoomSection('РАЗДЕЛ: КОМНАТА ДЕЛЮКС 2 ЭТАЖ', id, liveOptions);
+      }
+      if (id === ROOM_SECTIONS.DELUXE_3) {
+        return buildLiveRoomSection('РАЗДЕЛ: КОМНАТА ДЕЛЮКС 3 ЭТАЖ', id, liveOptions);
+      }
+      if (id === ROOM_SECTIONS.FAMILY) {
+        return buildLiveRoomSection('РАЗДЕЛ: КОМНАТА СЕМЕЙНАЯ', id, liveOptions);
+      }
+      return '';
+    })
     .filter((section) => section && section.trim())
     .join('\n\n-----------------------------\n\n');
 }
@@ -158,7 +195,7 @@ function isDeluxeComparison(normalized) {
   const hasDeluxe = mentionsDeluxe(normalized);
   const hasCompare = includesAny(normalized, ['отлича', 'разниц', 'отличие', 'сравн']);
   const twoAndThree =
-    (includesAny(normalized, ['2', 'втор']) && includesAny(normalized, ['3', 'трет']));
+    includesAny(normalized, ['2', 'втор']) && includesAny(normalized, ['3', 'трет']);
   return hasDeluxe && (hasCompare || twoAndThree);
 }
 
@@ -201,6 +238,10 @@ function isAdultFriends(normalized, profile) {
     includesAny(normalized, ['взрослых друз', 'пятеро взрослых', 'пять взрослых']) &&
     !isFamilyGroup(normalized, profile)
   );
+}
+
+function wantsMoreSpace(normalized) {
+  return includesAny(normalized, ['простор', 'побольше', 'семейн', 'две зоны', 'разделени']);
 }
 
 function namedCategorySections(normalized) {
@@ -262,9 +303,12 @@ function compositionSections(normalized, profile) {
     return selected;
   }
 
+  // Comfort-first: основной Comfort + один подходящий Deluxe (второй этаж по умолчанию;
+  // 3 этаж — при запросе большого балкона). Family — только при явном запросе простора/зон.
   if (adults === 2 && children === 1) {
     selected.push(ROOM_SECTIONS.COMFORT);
-    if (includesAny(normalized, ['простор', 'побольше', 'семейн'])) {
+    selected.push(largeBalcony ? ROOM_SECTIONS.DELUXE_3 : ROOM_SECTIONS.DELUXE_2);
+    if (wantsMoreSpace(normalized)) {
       selected.push(ROOM_SECTIONS.FAMILY);
     }
     return selected;
@@ -276,7 +320,20 @@ function compositionSections(normalized, profile) {
   }
 
   if (size === 3 && !cot) {
-    selected.push(ROOM_SECTIONS.COMFORT, ROOM_SECTIONS.FAMILY);
+    selected.push(ROOM_SECTIONS.COMFORT);
+    selected.push(largeBalcony ? ROOM_SECTIONS.DELUXE_3 : ROOM_SECTIONS.DELUXE_2);
+    if (wantsMoreSpace(normalized)) {
+      selected.push(ROOM_SECTIONS.FAMILY);
+    }
+    return selected;
+  }
+
+  if (adults === 3) {
+    selected.push(ROOM_SECTIONS.COMFORT);
+    selected.push(largeBalcony ? ROOM_SECTIONS.DELUXE_3 : ROOM_SECTIONS.DELUXE_2);
+    if (wantsMoreSpace(normalized)) {
+      selected.push(ROOM_SECTIONS.FAMILY);
+    }
     return selected;
   }
 
@@ -286,12 +343,15 @@ function compositionSections(normalized, profile) {
   }
 
   if (family && (children == null || children >= 1) && size == null) {
-    selected.push(ROOM_SECTIONS.COMFORT, ROOM_SECTIONS.FAMILY);
+    selected.push(ROOM_SECTIONS.COMFORT, ROOM_SECTIONS.DELUXE_2);
+    if (wantsMoreSpace(normalized)) {
+      selected.push(ROOM_SECTIONS.FAMILY);
+    }
     return selected;
   }
 
   if (size === 2) {
-    selected.push(ROOM_SECTIONS.COMFORT);
+    selected.push(ROOM_SECTIONS.COMFORT, ROOM_SECTIONS.DELUXE_2);
     return selected;
   }
 
@@ -317,7 +377,7 @@ export function selectRoomSections({
   followUp = false,
   lowConfidence = false
 } = {}) {
-  const profile = guestProfile || emptyGuestProfile();
+  const profile = profileForRouting(guestProfile, normalized);
 
   if (lowConfidence) {
     return [...LOW_CONFIDENCE_ROOM_SECTIONS];
@@ -364,5 +424,3 @@ export function selectRoomSections({
 
   return uniqueSections(selected);
 }
-
-export { ROOM_SECTION_BUILDERS };

@@ -61,9 +61,10 @@ export const SAFE_FALLBACK_TOPICS = [
   TOPICS.CONTACT
 ];
 
-function roomsSection(roomSections) {
+function roomsSection(roomSections, options = {}) {
   return buildRoomSectionsContext(
-    roomSections && roomSections.length ? roomSections : LOW_CONFIDENCE_ROOM_SECTIONS
+    roomSections && roomSections.length ? roomSections : LOW_CONFIDENCE_ROOM_SECTIONS,
+    options
   );
 }
 
@@ -154,15 +155,12 @@ function checkinSection() {
 }
 
 function salesSection() {
+  // SALES_CORE уже задаёт поведение продавца; сюда — только лестница подбора без дублей стиля.
   return stripBarbecueLines(
     joinSections([
-      'РАЗДЕЛ: РАСШИРЕННАЯ ЛОГИКА ПРОДАЖ И ПОДБОРА',
-      sales('ПРИНЦИПЫ ПРОДАЖИ', ['ЛОГИКА ПРОДАЖНОГО ДИАЛОГА', 'ПРИОРИТЕТ ПОДБОРА КОМНАТ']),
+      'РАЗДЕЛ: ЛОГИКА ПОДБОРА КАТЕГОРИЙ',
       sales('ПРИОРИТЕТ ПОДБОРА КОМНАТ', ['ПРАВИЛА ПОДБОРА', 'КАК AI ДОЛЖЕН ОПИСЫВАТЬ КОМНАТЫ']),
-      sales('ПРАВИЛА ПОДБОРА', ['КАК AI ДОЛЖЕН ОПИСЫВАТЬ КОМНАТЫ']),
-      sales('КАК AI ДОЛЖЕН ОПИСЫВАТЬ КОМНАТЫ', ['РАБОТА С ФОТОГРАФИЯМИ', 'ПАМЯТЬ ДИАЛОГА']),
-      KNOWLEDGE_FILES.communicationStyle,
-      sliceByHeading(KNOWLEDGE_FILES.objections, '5 ВЗРОСЛЫХ В ОДНОЙ КОМНАТЕ', ['ЗАДАТОК'])
+      sales('ПРАВИЛА ПОДБОРА', ['КАК AI ДОЛЖЕН ОПИСЫВАТЬ КОМНАТЫ'])
     ])
   );
 }
@@ -246,13 +244,17 @@ export const TOPIC_SOURCES = {
   ]
 };
 
-export function buildTopicContext(topics, { roomSections, fullRooms = false } = {}) {
+export function buildTopicContext(
+  topics,
+  { roomSections, fullRooms = false, guestProfile = null, normalized = '' } = {}
+) {
   const unique = [...new Set(topics)].filter((topic) => SECTION_BUILDERS[topic]);
+  const roomOptions = { guestProfile, normalized };
   return unique
     .map((topic) => {
       if (topic === TOPICS.ROOMS) {
         if (fullRooms) return buildFullRoomsTopicSection();
-        return SECTION_BUILDERS[topic](roomSections);
+        return SECTION_BUILDERS[topic](roomSections, roomOptions);
       }
       return SECTION_BUILDERS[topic]();
     })
