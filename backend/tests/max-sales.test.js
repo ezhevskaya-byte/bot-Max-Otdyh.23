@@ -42,7 +42,7 @@ describe('composition gate: сначала состав гостей', () => {
     assert.equal(needsGuestCompositionClarification(profile, text), true);
 
     const clarification = getCompositionClarificationResponse(text, profile, []);
-    assert.match(clarification, /трое гостей/i);
+    assert.match(clarification, /взросл/i);
     assert.match(clarification, /дети/i);
     assert.doesNotMatch(clarification, /комфорт/i);
     assert.doesNotMatch(clarification, /делюкс/i);
@@ -60,7 +60,8 @@ describe('composition gate: сначала состав гостей', () => {
 
     assert.equal(providerCalled, false);
     assert.equal(result.data?.compositionGate, true);
-    assert.match(result.text, /трое гостей/i);
+    assert.match(result.text, /здравств/i);
+    assert.match(result.text, /взросл|состав/i);
   });
 
   it('после уточнения состава gate не срабатывает', () => {

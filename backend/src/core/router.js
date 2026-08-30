@@ -3,6 +3,7 @@ import { matchRoomLink } from './room-link-route.js';
 import { matchCommand } from './commands.js';
 import { matchFaq } from './faq/answers.js';
 import { getCompositionClarificationResponse } from './guest-context/composition-gate.js';
+import { withFirstContactGreeting } from './channel/first-greeting.js';
 
 function aiFallback() {
   return {
@@ -72,6 +73,14 @@ function matchCompositionGate({ text, history = [], guestProfile = null }) {
   };
 }
 
+function withGreetingIfFirst(result, history) {
+  if (!result || !result.text) return result;
+  return {
+    ...result,
+    text: withFirstContactGreeting(result.text, history)
+  };
+}
+
 /**
  * MAX-слой передаёт askAI как зависимость.
  * Provider вызывается только при handled=false.
@@ -93,20 +102,23 @@ export async function routeThenMaybeAskAI({
   logRoute(routed);
 
   if (routed.handled) {
-    return routed;
+    return withGreetingIfFirst(routed, history);
   }
 
   const composition = matchCompositionGate({ text, history, guestProfile });
   if (composition) {
     console.log('[ROUTER] composition-gate');
-    return composition;
+    return withGreetingIfFirst(composition, history);
   }
 
   const answer = await askAI(text);
-  return {
-    handled: false,
-    type: 'ai',
-    text: answer,
-    data: { fallback: true }
-  };
+  return withGreetingIfFirst(
+    {
+      handled: false,
+      type: 'ai',
+      text: answer,
+      data: { fallback: true }
+    },
+    history
+  );
 }

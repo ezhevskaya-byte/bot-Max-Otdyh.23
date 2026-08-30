@@ -179,6 +179,13 @@ function extractPartySize(normalized) {
   );
   if (onGuests != null) return onGuests;
 
+  // «на троих» / «для двоих» без слова «человек» (не путать с «на 2 этаже»)
+  const onCountOnly = firstMatchCount(
+    normalized,
+    new RegExp(`(?:на|для)\\s+(\\d+|${COUNT_ALT})(?!\\s*этаж)`, 'u')
+  );
+  if (onCountOnly != null) return onCountOnly;
+
   const guests = firstMatchCount(
     normalized,
     new RegExp(`(\\d+|${COUNT_ALT})\\s*(?:гост[а-я]*|человек[а-я]*|чел)`, 'u')
