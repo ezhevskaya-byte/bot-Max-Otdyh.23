@@ -100,7 +100,7 @@ describe('FAQ pool + quiet hours: пакет №2', () => {
   describe('B. POOL', () => {
     it('«Бассейн есть?» — безопасный pool response', () => {
       const result = routed('Бассейн есть?');
-      assert.equal(result.data.intent, 'pool');
+      assert.equal(result.data.intent, 'pool_simple');
       assert.match(result.text, /бассейн/i);
       assert.match(result.text, /подогрева/i);
       assert.match(result.text, /09:00 до 21:00/);
@@ -108,8 +108,9 @@ describe('FAQ pool + quiet hours: пакет №2', () => {
       assertNoObjectMusic(result.text, 'pool exists');
     });
 
-    it('pool FAQ match: «есть бассейн?», «бассейн подогревается?», «до скольки бассейн?»', () => {
-      for (const text of ['есть бассейн?', 'бассейн подогревается?', 'до скольки бассейн?']) {
+    it('pool FAQ match: «есть бассейн?» → pool_simple; детальные → pool', () => {
+      assert.equal(faq('есть бассейн?')?.data?.intent, 'pool_simple');
+      for (const text of ['бассейн подогревается?', 'до скольки бассейн?']) {
         const result = faq(text);
         assert.equal(result?.data?.intent, 'pool', text);
         assertNoPoolPayment(result.text, text);
@@ -118,8 +119,11 @@ describe('FAQ pool + quiet hours: пакет №2', () => {
 
     it('guest-facing pool response не содержит payment classification', () => {
       const pool = FAQ_INTENTS.find((item) => item.id === 'pool');
+      const poolSimple = FAQ_INTENTS.find((item) => item.id === 'pool_simple');
       assertNoPoolPayment(pool.text, 'pool FAQ canned');
+      assertNoPoolPayment(poolSimple.text, 'pool_simple FAQ canned');
       assertNoObjectMusic(pool.text, 'pool FAQ canned');
+      assertNoObjectMusic(poolSimple.text, 'pool_simple FAQ canned');
     });
   });
 
@@ -164,8 +168,10 @@ describe('FAQ pool + quiet hours: пакет №2', () => {
         } else if (relPath.includes('answers.js')) {
           const poolIntent = FAQ_INTENTS.find((item) => item.id === 'pool');
           const poolPaymentIntent = FAQ_INTENTS.find((item) => item.id === 'pool_payment');
+          const poolSimpleIntent = FAQ_INTENTS.find((item) => item.id === 'pool_simple');
           assertNoPoolPayment(poolIntent.text, 'pool FAQ');
           assertNoPoolPayment(poolPaymentIntent.text, 'pool_payment FAQ');
+          assertNoPoolPayment(poolSimpleIntent.text, 'pool_simple FAQ');
         } else {
           assertNoPoolPaymentInKnowledge(content, relPath);
         }

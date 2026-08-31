@@ -138,22 +138,22 @@ describe('router: FAQ без LLM', () => {
     assert.equal(routed.type, 'faq');
     assert.equal(routed.data.intent, 'cooking');
     assert.match(routed.text, /плиты нет/i);
-    assert.match(routed.text, /терраса/i);
+    assert.match(routed.text, /террас/i);
     assert.doesNotMatch(routed.text, /общей кухн/i);
   });
 
-  it('варианты вопроса про готовку попадают в один intent', () => {
-    const variants = [
-      'можно готовить?',
-      'есть кухня?',
-      'есть плита?',
-      'можно самим приготовить?'
+  it('варианты вопроса про готовку попадают в правильный intent', () => {
+    const cases = [
+      { text: 'можно готовить?', intent: 'cooking' },
+      { text: 'есть кухня?', intent: 'kitchen' },
+      { text: 'есть плита?', intent: 'cooking' },
+      { text: 'можно самим приготовить?', intent: 'cooking' }
     ];
 
-    for (const text of variants) {
+    for (const { text, intent } of cases) {
       const routed = routeMessage({ text });
       assert.equal(routed.type, 'faq', text);
-      assert.equal(routed.data.intent, 'cooking', text);
+      assert.equal(routed.data.intent, intent, text);
     }
   });
 

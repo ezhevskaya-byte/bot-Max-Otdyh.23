@@ -57,6 +57,49 @@ export const FAQ_INTENTS = [
     ].join(' ')
   },
   {
+    id: 'pool_simple',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/pool/description.txt',
+      'backend/property/pool/scenarios.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      if (!normalized.includes('бассейн')) return false;
+      if (
+        includesAny(normalized, [
+          'глубин',
+          'размер',
+          'спасател',
+          'дет',
+          'ребен',
+          'малыш',
+          'до скольк',
+          'во скольк',
+          'вечером',
+          'утром',
+          'утр',
+          'правил',
+          'безопас',
+          'пользоваться',
+          'подогрева',
+          'платн',
+          'бесплат',
+          'доплат',
+          'входит',
+          'что у вас',
+          'расскаж',
+          'подроб'
+        ])
+      ) {
+        return false;
+      }
+      return includesAny(normalized, ['есть', 'имеется', 'бывает']);
+    },
+    text: 'Да, у нас есть подогреваемый бассейн с современной системой очистки воды. Бассейном могут пользоваться гости, проживающие в «Отдых.23», с 09:00 до 21:00.'
+  },
+  {
     id: 'pool',
     knowledgeType: 'PUBLIC',
     source: [
@@ -176,7 +219,28 @@ export const FAQ_INTENTS = [
     text: 'Мы бережём спокойный отдых гостей, поэтому с 23:00 до 08:00 просим соблюдать тишину.'
   },
   {
-    id: 'cooking',
+    id: 'room_refrigerator',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/rooms/comfort_2floor/description.txt',
+      'backend/property/terrace/description.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      return normalized.includes('холодильник');
+    },
+    text(normalized) {
+      const base =
+        'В комнатах установлены небольшие мини-холодильники — удобно охладить напитки и разместить небольшое количество продуктов. Если продуктов больше, на общей террасе есть холодильники, которыми могут пользоваться гости.';
+      if (includesAny(normalized, ['больш', 'объем', 'объём', 'крупн'])) {
+        return base;
+      }
+      return `Да, в каждой комнате есть небольшой мини-холодильник — удобно охладить напитки и разместить небольшое количество продуктов. Если продуктов больше, на общей террасе есть холодильники, которыми могут пользоваться гости.`;
+    }
+  },
+  {
+    id: 'own_kettle',
     knowledgeType: 'PUBLIC',
     source: [
       'backend/policies/general_rules.txt',
@@ -185,21 +249,66 @@ export const FAQ_INTENTS = [
       'backend/src/systemPrompt.js'
     ],
     match(normalized) {
-      return includesAny(normalized, [
-        'готовить',
-        'приготов',
-        'кухн',
-        'плит',
-        'мультивар',
-        'чайник',
-        'нагревательн'
-      ]);
+      return (
+        normalized.includes('чайник') &&
+        includesAny(normalized, ['свой', 'собствен', 'принести', 'в номер', 'в комнат'])
+      );
     },
-    text: [
-      'На террасе можно удобно разогреть готовую еду, сервировать стол, сделать чай или кофе; отсутствие зоны активного приготовления помогает сохранять спокойную атмосферу без запахов готовки.',
-      'Плиты нет, полноценное самостоятельное приготовление пищи гостями не предусмотрено.',
-      'Собственные мультиварки, плитки, чайники и другая нагревательная техника в комнатах не используются: для разогрева и приёма пищи оборудована терраса.'
-    ].join(' ')
+    text: 'Нет, пользоваться собственным чайником в номере нельзя. Сделать чай или кофе можно на общей террасе — там есть термопот с горячей водой.'
+  },
+  {
+    id: 'tea_in_room',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/terrace/description.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      if (
+        normalized.includes('чайник') &&
+        includesAny(normalized, ['свой', 'собствен', 'принести'])
+      ) {
+        return false;
+      }
+      return (
+        includesAny(normalized, ['чай', 'кофе']) &&
+        includesAny(normalized, ['номер', 'комнат', 'сделать'])
+      );
+    },
+    text: 'В номерах чайники не предусмотрены. Сделать чай или кофе можно на общей террасе — там есть термопот с горячей водой.'
+  },
+  {
+    id: 'microwave',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/terrace/description.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      return (
+        normalized.includes('микроволнов') ||
+        (includesAny(normalized, ['разогрет', 'подогрет']) &&
+          includesAny(normalized, ['ед', 'пищ', 'готов', 'обед', 'ужин', 'завтрак'])) ||
+        includesAny(normalized, ['где разогрет', 'где подогрет'])
+      );
+    },
+    text: 'Да, на общей террасе есть микроволновка — там можно разогреть готовую еду.'
+  },
+  {
+    id: 'kitchen',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/terrace/description.txt',
+      'backend/property/terrace/scenarios.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      return normalized.includes('кухн');
+    },
+    text: 'Полноценной кухни для самостоятельного приготовления пищи у нас нет. На общей террасе можно разогреть готовую еду, сделать чай или кофе и поесть.'
   },
   {
     id: 'meals_in_rooms',
@@ -227,13 +336,44 @@ export const FAQ_INTENTS = [
           'прием пищ',
           'питаться в'
         ]) ||
-        (includesAny(normalized, ['кушать', 'покушать', 'поесть']) &&
-          includesAny(normalized, ['в номер', 'в комнат']))
+        (includesAny(normalized, ['кушать', 'покушать', 'поесть', 'есть']) &&
+          includesAny(normalized, ['в номер', 'в комнат']) &&
+          !includesAny(normalized, [
+            'фен',
+            'телевизор',
+            'холодильник',
+            'сейф',
+            'кондиционер',
+            'балкон',
+            'wi-fi',
+            'wifi',
+            'чайник'
+          ]))
       );
     },
+    text: 'В номерах принимать пищу нельзя. Для этого предусмотрена общая терраса.'
+  },
+  {
+    id: 'cooking',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/terrace/description.txt',
+      'backend/property/terrace/scenarios.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      return includesAny(normalized, [
+        'готовить',
+        'приготов',
+        'плит',
+        'мультивар',
+        'нагревательн'
+      ]);
+    },
     text: [
-      'Для приёма пищи предусмотрена отдельная оборудованная терраса.',
-      'Благодаря этому комнаты остаются пространством для отдыха — чистым, свежим и без запахов еды.'
+      'Плиты нет, полноценное самостоятельное приготовление пищи гостями не предусмотрено.',
+      'На общей террасе можно разогреть готовую еду и сделать чай или кофе.'
     ].join(' ')
   },
   {
@@ -256,7 +396,7 @@ export const FAQ_INTENTS = [
     },
     text: [
       'Питание гостевой дом не предоставляет.',
-      'На террасе можно удобно разогреть готовую еду, сервировать стол, сделать чай или кофе: есть микроволновая печь, термопот с кипятком, холодильник, вода и посуда.'
+      'На общей террасе можно разогреть готовую еду, сделать чай или кофе и поесть.'
     ].join(' ')
   },
   {
