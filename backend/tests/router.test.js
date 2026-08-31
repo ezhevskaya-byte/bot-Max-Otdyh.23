@@ -398,8 +398,8 @@ describe('STAGE 2.6: канонические FAQ без LLM', () => {
     assert.equal(routed.handled, true);
     assert.equal(routed.type, 'faq');
     assert.equal(routed.data.intent, 'pool');
-    assert.match(routed.text, /21:00/);
-    assert.match(routed.text, /Пользоваться бассейном можно/i);
+    assert.match(routed.text, /09:00 до 21:00/);
+    assert.match(routed.text, /Бассейном могут пользоваться|Пользоваться бассейном можно/i);
     assert.doesNotMatch(routed.text, /бассейн работает/i);
   });
 

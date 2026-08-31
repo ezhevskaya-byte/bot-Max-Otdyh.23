@@ -99,8 +99,10 @@ describe('STAGE 2.6: активная база без устаревших пр�
     assert.match(pool.text, /1,10/);
     assert.match(pool.text, /1,70/);
     assert.match(pool.text, /подогреваем/i);
-    assert.match(pool.text, /Пользоваться бассейном можно с 09:00 до 21:00/);
+    assert.match(pool.text, /09:00 до 21:00/);
+    assert.match(pool.text, /подогрева/i);
     assert.doesNotMatch(pool.text, /бассейн работает/i);
+    assert.doesNotMatch(pool.text, /входит в проживание|без дополнительной оплаты/i);
     const houseRules = matchCommand(normalizeText('какие правила дома'));
     assert.equal(houseRules?.data?.intent, 'house_rules');
     assert.match(houseRules.text, /Пользоваться бассейном можно с 09:00 до 21:00/);

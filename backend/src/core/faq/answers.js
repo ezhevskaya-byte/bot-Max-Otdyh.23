@@ -30,6 +30,33 @@ export const FAQ_INTENTS = [
     ].join(' ')
   },
   {
+    id: 'pool_payment',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/pool/description.txt',
+      'backend/property/pool/scenarios.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      if (!normalized.includes('бассейн')) return false;
+      return includesAny(normalized, [
+        'платн',
+        'бесплат',
+        'доплат',
+        'входит в стоимость',
+        'входит в проживание',
+        'стоимость проживания',
+        'без дополнительной оплаты',
+        'доплачивать'
+      ]);
+    },
+    text: [
+      'Бассейном могут пользоваться гости, проживающие в «Отдых.23», с 09:00 до 21:00.',
+      'На территории есть подогреваемый бассейн с современной системой очистки воды.'
+    ].join(' ')
+  },
+  {
     id: 'pool',
     knowledgeType: 'PUBLIC',
     source: [
@@ -42,8 +69,9 @@ export const FAQ_INTENTS = [
       return normalized.includes('бассейн');
     },
     text: [
-      'На территории есть подогреваемый бассейн 8,6 × 3,7 м, глубина от 1,10 до 1,70 м.',
-      'Пользоваться бассейном можно с 09:00 до 21:00, это входит в проживание без дополнительной оплаты.',
+      'Да, у нас есть подогреваемый бассейн с современной системой очистки воды.',
+      'Бассейном могут пользоваться гости, проживающие в «Отдых.23», с 09:00 до 21:00.',
+      'Размер 8,6 × 3,7 м, глубина от 1,10 до 1,70 м.',
       'Спасателя на территории нет; дети могут быть у бассейна и пользоваться бассейном только под присмотром взрослых.'
     ].join(' ')
   },
@@ -99,6 +127,35 @@ export const FAQ_INTENTS = [
     ].join(' ')
   },
   {
+    id: 'quiet_hours_music',
+    knowledgeType: 'PUBLIC',
+    source: [
+      'backend/policies/general_rules.txt',
+      'backend/property/pool/scenarios.txt',
+      'backend/src/systemPrompt.js'
+    ],
+    match(normalized) {
+      if (!normalized.includes('музык')) return false;
+      return includesAny(normalized, [
+        'до 12',
+        'до полуноч',
+        'до 00',
+        'после 23',
+        'вечером',
+        'негромк',
+        'можно',
+        'можем',
+        'разреш'
+      ]);
+    },
+    text(normalized) {
+      if (normalized.includes('негромк')) {
+        return 'После 23:00 необходимо соблюдать тишину, поэтому музыка в это время не допускается даже негромко.';
+      }
+      return 'После 23:00 необходимо соблюдать тишину, поэтому включать музыку в это время нельзя.';
+    }
+  },
+  {
     id: 'quiet_hours',
     knowledgeType: 'PUBLIC',
     source: [
@@ -116,11 +173,7 @@ export const FAQ_INTENTS = [
         'музык'
       ]);
     },
-    text: [
-      'Мы бережём спокойный отдых гостей, поэтому с 23:00 до 08:00 просим соблюдать тишину.',
-      'Музыка у бассейна звучит до 23:00.',
-      'Это не ограничивает вход и выход с территории: гости могут свободно заходить и выходить в любое время суток.'
-    ].join(' ')
+    text: 'Мы бережём спокойный отдых гостей, поэтому с 23:00 до 08:00 просим соблюдать тишину.'
   },
   {
     id: 'cooking',
@@ -447,10 +500,12 @@ export function matchFaq(normalized) {
 
   for (const intent of FAQ_INTENTS) {
     if (intent.match(normalized)) {
+      const text =
+        typeof intent.text === 'function' ? intent.text(normalized) : intent.text;
       return {
         handled: true,
         type: 'faq',
-        text: intent.text,
+        text,
         data: { intent: intent.id, knowledgeType: intent.knowledgeType }
       };
     }

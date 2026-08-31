@@ -29,6 +29,19 @@ function isDetailedBookingRequest(normalized) {
   );
 }
 
+function isPoolPaymentQuestion(normalized) {
+  if (!normalized.includes('бассейн')) return false;
+  return includesAny(normalized, [
+    'платн',
+    'бесплат',
+    'доплат',
+    'входит в стоимость',
+    'входит в проживание',
+    'без дополнительной оплаты',
+    'доплачивать'
+  ]);
+}
+
 export function matchCommand(normalized) {
   if (!normalized) return null;
 
@@ -69,6 +82,7 @@ export function matchCommand(normalized) {
 
   if (
     !isDetailedBookingRequest(normalized) &&
+    !isPoolPaymentQuestion(normalized) &&
     includesAny(normalized, [
       'забронировать',
       'забронир',
