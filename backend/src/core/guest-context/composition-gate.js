@@ -33,6 +33,10 @@ function buildClarificationText(profile) {
     return 'Подскажите, пожалуйста, возраст детей? Это важно для правильного размещения.';
   }
 
+  if (partySize != null && partySize >= 5 && adults == null) {
+    return 'Подскажите, пожалуйста, сколько среди вас взрослых и детей? Если есть дети — напишите их возраст, и я подберу наиболее удобный вариант размещения.';
+  }
+
   if (partySize === 3) {
     return 'Буду рада помочь подобрать подходящий вариант. Подскажите, пожалуйста, каким составом планируете отдыхать: сколько взрослых и будут ли дети? Если да, напишите, пожалуйста, их возраст.';
   }
@@ -52,6 +56,7 @@ function isRoomSeekingMessage(normalized) {
 function isGuestCountContext(normalized) {
   if (isRoomSeekingMessage(normalized)) return true;
   if (includesAny(normalized, ['вдвоем', 'втроем'])) return true;
+  if (includesAny(normalized, ['семья из', 'семьи из', 'одна семья', 'семьей из'])) return true;
   // \b ненадёжен для кириллицы в JS — используем lookahead
   if (/(?:^|\s)нас\s+(\d+|двое|трое|четверо|пятеро)(?![а-яё])/u.test(normalized)) {
     return true;

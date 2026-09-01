@@ -85,7 +85,8 @@ export function buildRoomGeneralRulesSection() {
     '— 2 взрослых + 1 ребёнок: сначала «Комфорт»; если недоступен или нужна альтернатива — подходящий «Делюкс» (2 или 3 этаж по балкону), затем «Семейная», если она действительно подходит составу и пожеланиям.',
     '— 2 взрослых + 2 ребёнка: приоритет «Семейная».',
     '— 3 взрослых / 3 гостя: можно рассмотреть «Комфорт» или «Делюкс» по составу и пожеланиям; «Семейную» — если нужен больший простор или две зоны.',
-    '— 4 гостя: «Делюкс» или «Семейная»; при кроватке — только «Семейная».',
+    '— 4 взрослых: сначала подходящий «Делюкс»; «Семейную» — только как осознанную альтернативу при запросе пространства или двух зон.',
+    '— 4 гостя с детьми / семейный состав: по правилам состава; при кроватке на 4 гостей — только «Семейная».',
     '— семья из 5, включая семью со взрослыми детьми: «Семейная» допустима и может быть хорошим вариантом.',
     '',
     'Правило компании взрослых:',
@@ -244,6 +245,23 @@ function wantsMoreSpace(normalized) {
   return includesAny(normalized, ['простор', 'побольше', 'семейн', 'две зоны', 'разделени']);
 }
 
+/** Family для 4 взрослых — только при явном запросе зон / доп. пространства. */
+function wantsFamilyAsAlternative(normalized) {
+  return (
+    wantsMoreSpace(normalized) &&
+    includesAny(normalized, ['две зоны', 'разделени', 'жилые зон', 'семейн', 'простор'])
+  );
+}
+
+function hasPlacementBreakdown(profile) {
+  return profile?.adults != null || profile?.children != null;
+}
+
+function needsFamilyCompositionBreakdown(profile, normalized = '') {
+  const size = guestPartySize(profile, normalized);
+  return size != null && size >= 5 && !hasPlacementBreakdown(profile);
+}
+
 function namedCategorySections(normalized) {
   const named = [];
   if (mentionsComfort(normalized)) named.push(ROOM_SECTIONS.COMFORT);
@@ -286,7 +304,9 @@ function compositionSections(normalized, profile) {
   }
 
   if (size === 5 || includesAny(normalized, ['нас пятеро', 'семья из пяти', 'пять гост', '5 гост'])) {
-    selected.push(ROOM_SECTIONS.FAMILY);
+    if (hasPlacementBreakdown(profile)) {
+      selected.push(ROOM_SECTIONS.FAMILY);
+    }
     return selected;
   }
 
@@ -315,7 +335,14 @@ function compositionSections(normalized, profile) {
   }
 
   if (size === 4 && !cot) {
-    selected.push(ROOM_SECTIONS.DELUXE_2, ROOM_SECTIONS.DELUXE_3, ROOM_SECTIONS.FAMILY);
+    const fourAdultsOnly =
+      adults === 4 && (children === 0 || children == null);
+    selected.push(ROOM_SECTIONS.DELUXE_2, ROOM_SECTIONS.DELUXE_3);
+    if (!fourAdultsOnly) {
+      selected.push(ROOM_SECTIONS.FAMILY);
+    } else if (wantsFamilyAsAlternative(normalized)) {
+      selected.push(ROOM_SECTIONS.FAMILY);
+    }
     return selected;
   }
 
@@ -403,6 +430,8 @@ export function selectRoomSections({
     }
   } else if (fromComposition.length) {
     selected = [...fromComposition];
+  } else if (needsFamilyCompositionBreakdown(profile, normalized)) {
+    selected = [];
   } else if (followUp && previousRoomSections.length) {
     selected = previousRoomSections.filter((id) => id !== ROOM_SECTIONS.GENERAL_RULES);
   } else {
@@ -419,7 +448,11 @@ export function selectRoomSections({
 
   const descriptionSections = selected.filter((id) => id !== ROOM_SECTIONS.GENERAL_RULES);
   if (descriptionSections.length === 0) {
-    selected = [...LOW_CONFIDENCE_ROOM_SECTIONS];
+    if (needsFamilyCompositionBreakdown(profile, normalized)) {
+      selected = [ROOM_SECTIONS.GENERAL_RULES];
+    } else {
+      selected = [...LOW_CONFIDENCE_ROOM_SECTIONS];
+    }
   }
 
   return uniqueSections(selected);

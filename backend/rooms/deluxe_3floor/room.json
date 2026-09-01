@@ -81,7 +81,7 @@
     ],
     "rules": {
       "baby_cot_until_age": 4,
-      "family_room_priority_for_4_adults": true,
+      "family_room_priority_for_4_adults": false,
       "do_not_offer_as_budget_option": true,
       "no_baby_cot_when_4_guests": true,
       "if_4_guests_and_cot_needed_offer_family": true,

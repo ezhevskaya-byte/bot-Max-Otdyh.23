@@ -20,15 +20,14 @@ function reductionPct(before, after) {
 }
 
 describe('STAGE 3A: knowledge retriever', () => {
-  it('1. семья из пяти → ROOMS + SALES, Семейная до 5 в context', () => {
+  it('1. семья из пяти → ROOMS + SALES, уточнение состава до Family', () => {
     const result = retrieveKnowledge({
       text: 'Какой номер выбрать для семьи из пяти человек?'
     });
     assert.equal(hasTopic(result, TOPICS.ROOMS), true);
     assert.equal(hasTopic(result, TOPICS.SALES), true);
     assert.equal(result.fallback, false);
-    assert.match(result.context, /Семейная/i);
-    assert.match(result.context, /до 5 гостей/i);
+    assert.doesNotMatch(result.context, /1\.\s+Размещение 2 гостей/i);
   });
 
   it('2. вдвоём и ребёнок 2 года + кроватка → ROOMS + BABY_COT, бесплатная кроватка', () => {

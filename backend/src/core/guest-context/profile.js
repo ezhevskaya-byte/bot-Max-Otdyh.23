@@ -140,6 +140,11 @@ function extractChildrenCount(normalized) {
   );
   if (withWord != null) return withWord;
 
+  if (includesAny(normalized, ['и дети', 'и детей', 'детей'])) {
+    const ages = extractChildrenAges(normalized);
+    if (ages.length > 0) return ages.length;
+  }
+
   if (includesAny(normalized, ['с ребенком', 'и ребенок', 'и ребенка', 'ребенку'])) {
     return 1;
   }
@@ -159,6 +164,8 @@ function extractChildrenAges(normalized) {
     /дети\s+(\d+)\s*(?:год|года|лет)\s+и\s+(\d+)\s*(?:год|года|лет)/g,
     /детям\s+(\d+)\s+и\s+(\d+)/g,
     /дети\s+(\d+)\s*(?:,|и)\s*(\d+)/g,
+    /дети\s+(\d+)\s*,\s*(\d+)\s+и\s+(\d+)\s*(?:год|года|лет)?/g,
+    /дети\s+(\d+)\s+(\d+)\s+и\s+(\d+)\s*(?:год|года|лет)?/g,
     /возраст(?:ы)?\s+(\d+)\s*(?:,|и)\s*(\d+)/g
   ];
 
@@ -166,8 +173,10 @@ function extractChildrenAges(normalized) {
     for (const match of normalized.matchAll(pattern)) {
       const first = parseAgeToken(match[1]);
       const second = parseAgeToken(match[2]);
+      const third = parseAgeToken(match[3]);
       if (first != null) ages.push(first);
       if (second != null) ages.push(second);
+      if (third != null) ages.push(third);
     }
   }
 

@@ -106,18 +106,13 @@ describe('STAGE 3B: точный room retrieval', () => {
     assert.doesNotMatch(result.context, /КОМНАТА: family_room/);
   });
 
-  it('3. Нас пятеро, одна семья → FAMILY + general + sales, вместимость до 5', () => {
-    const result = retrieveKnowledge({ text: 'Нас пятеро, одна семья' });
+  it('3. Нас пятеро, одна семья → уточнение состава, без Family в sections до breakdown', () => {
+    const text = 'Нас пятеро, одна семья';
+    const result = retrieveKnowledge({ text });
     assert.equal(hasTopic(result, TOPICS.ROOMS), true);
     assert.equal(hasTopic(result, TOPICS.SALES), true);
-    assert.equal(hasRoom(result, ROOM_SECTIONS.FAMILY), true);
+    assert.equal(hasRoom(result, ROOM_SECTIONS.FAMILY), false);
     assert.equal(hasRoom(result, ROOM_SECTIONS.GENERAL_RULES), true);
-    assert.equal(hasRoom(result, ROOM_SECTIONS.COMFORT), false);
-    assert.equal(hasRoom(result, ROOM_SECTIONS.DELUXE_2), false);
-    assert.equal(hasRoom(result, ROOM_SECTIONS.DELUXE_3), false);
-    assert.match(result.context, /до 5 гостей/i);
-    assert.match(result.context, /family_room/);
-    assert.doesNotMatch(result.context, /deluxe_2floor/);
   });
 
   it('4. Нас пятеро взрослых друзей → FAMILY/general/sales, две комнаты, нет запрета', () => {

@@ -210,9 +210,10 @@ function pickScenarioNumbers(folder, profile, normalized) {
     if (cot && twin) return [6];
     if (cot || (age != null && age <= 4)) return [5];
     if (adults === 3 || (size === 3 && children === 0)) return [4, 7];
+    if (adults === 1 && children === 2) return [7];
     if (
       (adults === 2 && children === 1) ||
-      (size === 3 && (age == null || age >= 5)) ||
+      (size === 3 && adults !== 1 && (age == null || age >= 5)) ||
       (size === 3 && children == null && includesAny(normalized, ['троих', 'трёх', 'трех', '3 гост']))
     ) {
       return twin ? [2, 3] : [3];
@@ -230,6 +231,7 @@ function pickScenarioNumbers(folder, profile, normalized) {
       return [5];
     }
     if (size === 4 || (adults != null && (adults || 0) + (children || 0) === 4)) return [4];
+    if (adults === 1 && children === 2) return [];
     if (
       size === 3 ||
       (adults === 2 && children === 1) ||
@@ -245,6 +247,7 @@ function pickScenarioNumbers(folder, profile, normalized) {
   }
 
   if (folder === 'family_room') {
+    if (!hasReliableComposition(current, normalized)) return [];
     if (cot || (age != null && age <= 4)) return [4];
     if (size === 5 || adults === 5 || includesAny(normalized, ['пятеро', '5 гост', 'пять'])) {
       return friendsOrFiveAdults(normalized, current) ? [3, 5] : [3];
@@ -273,12 +276,26 @@ export function selectRelevantScenarioText(scenariosText, { folder, guestProfile
   }
 
   const reliable = hasReliableComposition(guestProfile, normalized);
-  const numbers = reliable ? pickScenarioNumbers(folder, guestProfile, normalized) : null;
+  const partySize = guestPartySize(guestProfile, normalized);
+  let numbers = reliable ? pickScenarioNumbers(folder, guestProfile, normalized) : null;
+
+  if (
+    folder === 'family_room' &&
+    partySize != null &&
+    partySize >= 4 &&
+    !reliable
+  ) {
+    numbers = [];
+  }
 
   let chosen = blocks;
-  if (numbers && numbers.length) {
-    const filtered = blocks.filter((b) => numbers.includes(b.number));
-    if (filtered.length) chosen = filtered;
+  if (numbers !== null) {
+    if (numbers.length === 0) {
+      chosen = [];
+    } else {
+      const filtered = blocks.filter((b) => numbers.includes(b.number));
+      if (filtered.length) chosen = filtered;
+    }
   }
 
   return joinSections([
