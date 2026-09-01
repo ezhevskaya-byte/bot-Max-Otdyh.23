@@ -1,4 +1,5 @@
 import { includesAny, isComplexRequest } from '../text-normalize.js';
+import { hasRoomSelectionContext } from '../guest-context/composition-gate.js';
 
 /**
  * FAQ только из подтверждённых фактов живого бота.
@@ -456,7 +457,9 @@ export const FAQ_INTENTS = [
       'backend/src/systemPrompt.js'
     ],
     match(normalized) {
-      return includesAny(normalized, ['детская кроватка', 'кроватка']);
+      if (!includesAny(normalized, ['детская кроватка', 'кроватк'])) return false;
+      if (hasRoomSelectionContext(normalized)) return false;
+      return true;
     },
     text: [
       'Детская кроватка предоставляется по запросу для ребёнка до 4 лет и входит в стоимость.',

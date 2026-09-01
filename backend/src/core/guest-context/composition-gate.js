@@ -1,4 +1,4 @@
-import { includesAny, normalizeText } from '../text-normalize.js';
+import { includesAny, normalizeText, isAdvisoryRequest } from '../text-normalize.js';
 import { emptyGuestProfile, extractGuestFacts, mergeGuestProfile } from './profile.js';
 
 const ROOM_SEEKING_MARKERS = [
@@ -50,6 +50,22 @@ function buildClarificationText(profile) {
 
 function isRoomSeekingMessage(normalized) {
   return includesAny(normalized, ROOM_SEEKING_MARKERS);
+}
+
+/**
+ * Сообщение про подбор номера, а не справочный FAQ.
+ * Используется в FAQ-routing (baby_cot) и composition gate.
+ */
+export function hasRoomSelectionContext(normalized) {
+  if (isAdvisoryRequest(normalized)) return true;
+  if (isRoomSeekingMessage(normalized)) return true;
+
+  const facts = extractGuestFacts(normalized);
+  return (
+    facts.adults != null ||
+    facts.children != null ||
+    facts.partySize != null
+  );
 }
 
 /** Сообщения вроде «нас трое» / «мы вдвоём», где важен состав. */

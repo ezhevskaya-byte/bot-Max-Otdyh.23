@@ -149,7 +149,58 @@ describe('пакет №4.1: room-selection consistency', () => {
   });
 });
 
-describe('пакет №4.1: FAQ routing diagnostic (без изменений routing)', () => {
+describe('пакет №4.2: baby_cot room-selection routing', () => {
+  it('1. «У вас есть детская кроватка?» → FAQ baby_cot', () => {
+    const routed = routeMessage({ text: 'У вас есть детская кроватка?' });
+    assert.equal(routed.handled, true);
+    assert.equal(routed.type, 'faq');
+    assert.equal(routed.data.intent, 'baby_cot');
+  });
+
+  it('2. «Кроватку предоставляете?» → FAQ baby_cot', () => {
+    const routed = routeMessage({ text: 'Кроватку предоставляете?' });
+    assert.equal(routed.handled, true);
+    assert.equal(routed.data.intent, 'baby_cot');
+  });
+
+  it('3. подбор + состав + кроватка → AI, не FAQ baby_cot', () => {
+    const routed = routeMessage({
+      text: 'Нас двое взрослых и ребёнок 2 лет, нужна кроватка. Какой номер нам подойдёт?'
+    });
+    assert.equal(routed.handled, false);
+    assert.equal(routed.type, 'ai');
+  });
+
+  it('4. «2 взрослых и малыш 2 лет… Что посоветуете?» → AI', () => {
+    const routed = routeMessage({
+      text: '2 взрослых и малыш 2 лет, нужна кроватка. Что посоветуете?'
+    });
+    assert.equal(routed.handled, false);
+    assert.equal(routed.type, 'ai');
+  });
+
+  it('5. «Какой номер выбрать с ребёнком 2 лет и кроваткой?» → AI', () => {
+    const routed = routeMessage({
+      text: 'Какой номер выбрать с ребёнком 2 лет и кроваткой?'
+    });
+    assert.equal(routed.handled, false);
+    assert.equal(routed.type, 'ai');
+  });
+
+  it('6. deluxe_large_balcony: справочный и подбор — без регрессии', () => {
+    const faq = routeMessage({ text: 'Есть номера с большим балконом?' });
+    assert.equal(faq.handled, true);
+    assert.equal(faq.data.intent, 'deluxe_large_balcony');
+
+    const ai = routeMessage({
+      text: 'Нас двое, хотим номер с большим балконом. Что посоветуете?'
+    });
+    assert.equal(ai.handled, false);
+    assert.equal(ai.type, 'ai');
+  });
+});
+
+describe('пакет №4.1: FAQ routing diagnostic (без изменений deluxe_large_balcony)', () => {
   it('baby_cot: справочный вопрос → FAQ', () => {
     const routed = routeMessage({ text: 'У вас есть детская кроватка?' });
     assert.equal(routed.handled, true);
@@ -157,13 +208,12 @@ describe('пакет №4.1: FAQ routing diagnostic (без изменений r
     assert.equal(routed.data.intent, 'baby_cot');
   });
 
-  it('baby_cot: подбор номера + кроватка → сейчас перехватывается FAQ (кандидат для №4.2)', () => {
+  it('baby_cot: подбор номера + кроватка → AI room-selection', () => {
     const routed = routeMessage({
       text: 'Нас двое взрослых и ребёнок 2 лет, нужна кроватка. Какой номер нам подойдёт?'
     });
-    assert.equal(routed.handled, true);
-    assert.equal(routed.type, 'faq');
-    assert.equal(routed.data.intent, 'baby_cot');
+    assert.equal(routed.handled, false);
+    assert.equal(routed.type, 'ai');
   });
 
   it('deluxe_large_balcony: справочный вопрос → FAQ', () => {
