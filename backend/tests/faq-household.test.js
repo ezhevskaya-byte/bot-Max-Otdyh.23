@@ -59,16 +59,15 @@ describe('FAQ household: пакет №3 + 3.1', () => {
   });
 
   describe('B. TEA / KETTLE', () => {
-    it('«А чай в номере можно сделать?» — сначала терраса, затем правило номера', () => {
+    it('«А чай в номере можно сделать?» — терраса и термопот', () => {
       const result = routed('А чай в номере можно сделать?');
       assert.equal(result.data.intent, 'tea_in_room');
       assert.match(result.text, /термопот/i);
-      assert.match(result.text, /чайник/i);
-      assert.ok(result.text.indexOf('террас') < result.text.indexOf('не предусмотрен'));
+      assert.match(result.text, /террас/i);
       assert.doesNotMatch(result.text, JUSTIFICATION_FORBIDDEN);
     });
 
-    it('«Можно свой чайник в номер?» — решение через террасу, без жёсткого «Нет, ... нельзя»', () => {
+    it('«Можно свой чайник в номер?» — альтернатива и ясное правило', () => {
       const result = routed('Можно свой чайник в номер?');
       assert.equal(result.data.intent, 'own_kettle');
       assert.match(result.text, /термопот/i);
@@ -104,12 +103,12 @@ describe('FAQ household: пакет №3 + 3.1', () => {
   });
 
   describe('E. KITCHEN', () => {
-    it('«Кухня есть?» — сначала терраса, затем нет полноценной кухни', () => {
+    it('«Кухня есть?» — терраса и приём пищи без акцента на отсутствие', () => {
       const result = routed('Кухня есть?');
       assert.equal(result.data.intent, 'kitchen');
       assert.match(result.text, /террас/i);
-      assert.match(result.text, /полноценн.*кухн.*нет/i);
-      assert.ok(result.text.indexOf('террас') < result.text.indexOf('нет'));
+      assert.match(result.text, /при[её]м пищи|поесть|разогрет/i);
+      assert.doesNotMatch(result.text, /полноценн.*кухн.*нет/i);
       assert.doesNotMatch(result.text, /мультиварк/i);
     });
   });
@@ -157,5 +156,45 @@ describe('FAQ household: пакет №3 + 3.1', () => {
       assert.notEqual(result.data?.intent, 'meals_in_rooms');
       assert.equal(result.type, 'ai');
     });
+  });
+});
+
+describe('FAQ guest-first: пакет №3.2', () => {
+  it('«А чай в номере можно сделать?» — термопот/терраса, без обязательного запрета про чайник', () => {
+    const result = routed('А чай в номере можно сделать?');
+    assert.equal(result.data.intent, 'tea_in_room');
+    assert.match(result.text, /термопот/i);
+    assert.match(result.text, /террас/i);
+    assert.doesNotMatch(result.text, /чайник.*не предусмотрен|не предусмотрен.*чайник/i);
+  });
+
+  it('«Свой чайник можно в номер?» — правило и альтернатива', () => {
+    const result = routed('Свой чайник можно в номер?');
+    assert.equal(result.data.intent, 'own_kettle');
+    assert.match(result.text, /термопот/i);
+    assert.match(result.text, /собственн.*чайник|не используем собственн/i);
+    assert.doesNotMatch(result.text, /^Нет,\s/i);
+  });
+
+  it('«Кухня есть?» — сначала терраса, объект предлагает решение', () => {
+    const result = routed('Кухня есть?');
+    assert.equal(result.data.intent, 'kitchen');
+    assert.match(result.text, /террас/i);
+    assert.doesNotMatch(result.text, /полноценн.*кухн.*нет|плит.*нет/i);
+    assert.ok(!/^полноценн/i.test(result.text.trim()));
+  });
+
+  it('«Можно готовить?» — честно об отсутствии кухни с плитой', () => {
+    const result = routed('Можно готовить?');
+    assert.equal(result.data.intent, 'cooking');
+    assert.match(result.text, /плит|полноценн.*приготов|самостоятельн.*приготов/i);
+  });
+
+  it('«Покушать в номере можно?» — терраса и правило комнаты', () => {
+    const result = routed('Покушать в номере можно?');
+    assert.equal(result.data.intent, 'meals_in_rooms');
+    assert.match(result.text, /террас/i);
+    assert.match(result.text, /просим пищу не принимать|не принимать/i);
+    assert.ok(result.text.indexOf('террас') < result.text.indexOf('не принимать'));
   });
 });
