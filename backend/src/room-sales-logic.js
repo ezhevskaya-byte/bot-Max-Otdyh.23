@@ -1,6 +1,50 @@
-import { profileSearchText } from './core/guest-context/profile.js';
+import { profileSearchText, guestPartySize } from './core/guest-context/profile.js';
 import { needsGuestCompositionClarification } from './core/guest-context/composition-gate.js';
 import { formatCategoryUrlsForHint } from './core/channel/room-urls.js';
+import { normalizeText } from './core/text-normalize.js';
+
+const CATEGORY_CAPACITY = {
+  comfort: 3,
+  deluxe: 4,
+  family: 5
+};
+
+const CATEGORY_LABELS = {
+  comfort: 'Комфорт',
+  deluxe: 'Делюкс',
+  family: 'Семейная'
+};
+
+function detectGuestChosenCategory(userText = '', guestProfile = null) {
+  if (guestProfile?.selectedRoom) return guestProfile.selectedRoom;
+
+  const t = normalizeText(userText);
+  if (!t) return null;
+
+  const asksCompare = /чем отлича|отличает|сравн|разниц|что лучше/.test(t);
+  if (asksCompare) return null;
+
+  const interest =
+    /хотим|хочу|подробнее|расскаж|интерес|видели|нравится|берем|берём|рассмотр|эта комнат|этот номер|про семейн|про комфорт|про делюкс|о семейн|о комфорт|о делюкс/.test(
+      t
+    );
+  if (!interest) return null;
+
+  const hitComfort = t.includes('комфорт');
+  const hitDeluxe = t.includes('делюкс');
+  const hitFamily = t.includes('семейн') || t.includes('family');
+  const hits = [hitComfort, hitDeluxe, hitFamily].filter(Boolean).length;
+  if (hits !== 1) return null;
+
+  if (hitComfort) return 'comfort';
+  if (hitDeluxe) return 'deluxe';
+  if (hitFamily) return 'family';
+  return null;
+}
+
+function detectComparisonRequest(userText = '') {
+  return /чем отлича|отличает|сравн|разниц/.test(normalizeText(userText));
+}
 
 export function buildRoomSelectionHint(userText, history = [], guestProfile = null) {
     const fullText = [
@@ -50,7 +94,16 @@ export function buildRoomSelectionHint(userText, history = [], guestProfile = nu
       fullText.includes('4 гост') ||
       fullText.includes('четыре гост') ||
       fullText.includes('нас 4') ||
-      fullText.includes('нас четверо');
+      fullText.includes('нас четверо') ||
+      guestProfile?.partySize === 4;
+
+    const fourAdults =
+      fullText.includes('4 взрослых') ||
+      fullText.includes('четыре взрослых') ||
+      fullText.includes('четверо взрослых') ||
+      fullText.includes('четыре взросл') ||
+      (guestProfile?.adults === 4 &&
+        (guestProfile?.children == null || guestProfile?.children === 0));
 
     const fiveGuests =
       fullText.includes('пятеро') ||
@@ -66,13 +119,52 @@ export function buildRoomSelectionHint(userText, history = [], guestProfile = nu
       fullText.includes('семьей') ||
       fullText.includes('дети') ||
       fullText.includes('ребён') ||
-      fullText.includes('ребен');
+      fullText.includes('ребен') ||
+      guestProfile?.groupType === 'family';
 
     const adultFriends =
       fullText.includes('друз') ||
       fullText.includes('взрослых друз') ||
       fullText.includes('компани') ||
+      guestProfile?.groupType === 'friends' ||
       (fullText.includes('взрослых') && !familyContext);
+
+    const wantsTogether =
+      fullText.includes('вместе') ||
+      fullText.includes('в одном') ||
+      fullText.includes('один номер') ||
+      fullText.includes('одну комнат') ||
+      fullText.includes('все в одной');
+
+    const oneFamilyFourAdults =
+      guestProfile?.groupType === 'family' ||
+      fullText.includes('одна семья') ||
+      fullText.includes('одной семь') ||
+      fullText.includes('родител') ||
+      fullText.includes('родствен') ||
+      fullText.includes('взрослые дети') ||
+      fullText.includes('взрослых дет') ||
+      (familyContext && fourAdults && !adultFriends);
+
+    const twoCouples =
+      fullText.includes('две пары') ||
+      fullText.includes('две пароч') ||
+      fullText.includes('две семьи') ||
+      fullText.includes('парами');
+
+    const nonFamilyFourAdults =
+      twoCouples ||
+      guestProfile?.groupType === 'friends' ||
+      fullText.includes('друз') ||
+      fullText.includes('компани') ||
+      (fourAdults && !oneFamilyFourAdults && !familyContext);
+
+    const wantsPersonalSpace =
+      fullText.includes('отдельн') ||
+      fullText.includes('приват') ||
+      fullText.includes('личное простран') ||
+      fullText.includes('два номер') ||
+      fullText.includes('две комнат');
 
     const largeBalcony =
       fullText.includes('балкон') &&
@@ -93,6 +185,48 @@ export function buildRoomSelectionHint(userText, history = [], guestProfile = nu
   Сначала спроси: взрослые или с детьми, и если есть дети — их возраст.
   Не превращай ответ в анкету — один короткий уточняющий вопрос.
   `;
+    }
+
+    const chosenCategory = detectGuestChosenCategory(userText, guestProfile);
+    const partySize = guestPartySize(guestProfile, normalizeText(userText));
+
+    if (detectComparisonRequest(userText)) {
+      hint += `
+  ЖЁСТКАЯ ЛОГИКА СРАВНЕНИЯ КАТЕГОРИЙ:
+
+  Гость сам спросил об отличиях. Сравнивай только подтверждённые факты.
+  ЗАПРЕЩЕНО: «лучше», «хуже», «вам нужна/не нужна», «слишком большой/маленький».
+  «Комфорт»: уютный вариант для пары или небольшой семьи (до 3 гостей).
+  «Делюкс»: двуспальная кровать, удобный диван, дополнительное место, комфортная планировка (до 4 гостей).
+  «Семейная»: просторная комната, две жилые зоны, размещение до 5 гостей.
+  `;
+    } else if (chosenCategory) {
+      const label = CATEGORY_LABELS[chosenCategory];
+      const maxGuests = CATEGORY_CAPACITY[chosenCategory];
+      const fits =
+        partySize == null || partySize <= 0 || partySize <= maxGuests;
+
+      if (fits) {
+        hint += `
+  ЖЁСТКАЯ ЛОГИКА УВАЖЕНИЯ ВЫБОРА ГОСТЯ:
+
+  Гость сам выбрал / спросил категорию «${label}».
+  Она подходит по правилам размещения для известного состава.
+  ОБЯЗАТЕЛЬНО: ответить именно про «${label}» — преимущества и планировку из контекста знаний.
+  ЗАПРЕЩЕНО: переубеждать, переводить на другую категорию, говорить «вам лучше другая», «вам не нужна», «слишком большой/маленький номер».
+  Не сравнивать с другими категориями, если гость об этом не просил.
+  Можно мягко отметить комфорт для их состава, оставаясь в рамках «${label}».
+  `;
+      } else {
+        hint += `
+  ЖЁСТКАЯ ЛОГИКА КОРРЕКЦИИ ВЫБОРА ГОСТЯ:
+
+  Гость хочет «${label}», но состав (${partySize} гост.) превышает вместимость этой категории (до ${maxGuests}).
+  Мягко объяснить через комфорт, без «нельзя» / «вам не подойдёт».
+  Пример тона: «Комната «${label}» рассчитана на размещение до ${maxGuests} гостей. Для вашей компании лучше рассмотреть другие варианты, чтобы всем было комфортно.»
+  Затем при необходимости уточнить характер компании и предложить подходящую альтернативу.
+  `;
+      }
     }
   
     if (hasTwoAdults && hasOneChild && childSix) {
@@ -144,6 +278,48 @@ export function buildRoomSelectionHint(userText, history = [], guestProfile = nu
   В «Делюкс» при размещении 4 гостей кроватку не устанавливаем.
   Нужно рекомендовать «Семейную»: там кроватку установить можно.
   `;
+    }
+
+    if ((fourAdults || (fourGuests && (adultFriends || oneFamilyFourAdults || twoCouples) && !familyContext) || (fourAdults && oneFamilyFourAdults)) && !wantsCot) {
+      hint += `
+  ЖЁСТКАЯ ЛОГИКА ДЛЯ ЧЕТЫРЁХ ВЗРОСЛЫХ:
+
+  Количество гостей само по себе не достаточный критерий. Учитывать характер компании.
+
+  1) ОДНА СЕМЬЯ (родители + взрослые дети, родственники, привыкли отдыхать вместе):
+  — можно рекомендовать «Семейную» как комфортный вариант: две отдельные жилые зоны, больше пространства, размещение всем вместе;
+  — другие варианты — по пожеланиям гостя.
+
+  2) НЕ ОДНА СЕМЬЯ (две пары, друзья, взрослые без семейной связи):
+  — ЗАПРЕЩЕНО рекомендовать один «Делюкс» первым вариантом.
+  Приоритет:
+  1. Две отдельные комнаты — больше личного пространства; у каждой пары/гостей свой санузел; комфортнее при разном режиме отдыха.
+  2. «Семейная», если хотят проживать вместе — две жилые зоны, можно разделить пространство.
+  3. «Делюкс» только как компромисс: хотят именно один номер; нужен вариант без двух зон; другие варианты не подходят по бюджету или пожеланиям.
+
+  Если характер компании ещё неясен — мягко уточни одной фразой: одна семья или, например, две пары / друзья. Не превращай в анкету.
+
+  ЗАПРЕЩЕНО: «вам будет неудобно», «вам нельзя», «вам не подойдёт».
+  Объяснять через заботу о комфорте: «обычно для такой компании удобнее…», «чтобы у каждого было своё пространство…», «для более комфортного отдыха…».
+  `;
+
+      if (oneFamilyFourAdults) {
+        hint += `
+  Уточнение: это одна семья → можно вести с «Семейной» (две зоны), другие варианты по пожеланиям.
+  `;
+      }
+
+      if (nonFamilyFourAdults || wantsPersonalSpace) {
+        hint += `
+  Уточнение: не одна семья / важна приватность → первым вариантом две комнаты, не один «Делюкс».
+  `;
+      }
+
+      if (wantsTogether && !wantsPersonalSpace) {
+        hint += `
+  Уточнение: хотят один общий номер → «Семейная» (две жилые зоны); «Делюкс» — только компромисс.
+  `;
+      }
     }
 
     if (fiveGuests && familyContext) {

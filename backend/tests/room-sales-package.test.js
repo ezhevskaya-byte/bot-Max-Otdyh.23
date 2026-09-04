@@ -21,6 +21,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { routeMessage } from '../src/core/router.js';
+import { buildRoomSelectionHint } from '../src/room-sales-logic.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COMFORT_SCENARIOS = readFileSync(
@@ -137,6 +138,36 @@ describe('sales package: live knowledge без обесценивания Comfor
       /3 взрослых[\s\S]{0,40}только Family|3 взрослых[\s\S]{0,80}только «Семейная»|трое взрослых[\s\S]{0,40}обязательно две комнаты/i
     );
     assert.match(context, /Комфорт|Comfort/i);
+  });
+
+  it('7b. 4 взрослых: семья vs не семья, приоритеты', () => {
+    const friends = buildRoomSelectionHint(
+      'нас четверо взрослых друзей',
+      [],
+      { ...emptyGuestProfile(), adults: 4, children: 0, partySize: 4, groupType: 'friends' }
+    );
+    assert.match(friends, /ЧЕТЫРЁХ ВЗРОСЛЫХ|характер компании/i);
+    assert.match(friends, /ЗАПРЕЩЕНО рекомендовать один|не рекомендовать один/i);
+    assert.match(friends, /Делюкс.*первым|первым вариантом/i);
+    assert.match(friends, /Две отдельные комнаты|два отдельных номера|две комнаты/i);
+    assert.match(friends, /обычно для такой компании удобнее|своё пространство|заботу о комфорте/i);
+    assert.doesNotMatch(friends.toLowerCase(), /компактн/);
+
+    const family = buildRoomSelectionHint(
+      'нас четверо взрослых, одна семья, родители и взрослые дети',
+      [],
+      { ...emptyGuestProfile(), adults: 4, children: 0, partySize: 4, groupType: 'family' }
+    );
+    assert.match(family, /ОДНА СЕМЬЯ|Семейную/i);
+    assert.match(family, /две отдельные жилые зоны|две жилые зоны/i);
+
+    const together = buildRoomSelectionHint(
+      'хотим жить все вместе в одном номере',
+      [{ role: 'user', content: 'нас четверо взрослых друзей' }],
+      { ...emptyGuestProfile(), adults: 4, children: 0, partySize: 4, groupType: 'friends' }
+    );
+    assert.match(together, /Семейная/i);
+    assert.match(together, /компромисс/i);
   });
 
   it('8. ограничения по кроватке сохраняются', () => {

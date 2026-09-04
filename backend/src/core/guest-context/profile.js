@@ -246,13 +246,18 @@ function extractSelectedRoom(normalized) {
   const choosing = includesAny(normalized, [
     'берем',
     'берём',
-    'хотим комфорт',
-    'хотим делюкс',
-    'хотим семейн',
+    'хотим',
+    'хочу',
+    'подробнее',
+    'расскаж',
+    'интерес',
+    'видели',
+    'нравится',
     'эта комната',
     'этот номер',
     'остановимся',
-    'выберем'
+    'выберем',
+    'рассмотр'
   ]);
   if (!choosing) return null;
   if (includesAny(normalized, ['комфорт'])) return 'comfort';
@@ -411,6 +416,7 @@ export function profileSearchText(profile) {
   const bits = [];
   if (current.adults != null) bits.push(`${current.adults} взрослых`);
   if (current.adults === 2) bits.push('двое взрослых', '2 взрослых');
+  if (current.adults === 4) bits.push('четыре взрослых', '4 взрослых', 'четверо взрослых');
   if (current.children === 1) bits.push('ребёнок', 'ребенок', 'один ребёнок');
   if (current.children === 2) bits.push('двое детей', '2 ребёнка');
   for (const age of current.childrenAges || []) {
